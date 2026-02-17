@@ -48,6 +48,13 @@ export default function Layout() {
         },
     ];
 
+    // Add Super Admin specific routes
+    if (user?.role === 'super_admin') {
+        navItems.find(s => s.section === 'System')?.items.push(
+            { to: '/tenants', icon: <Building2 />, label: 'Organizations' }
+        );
+    }
+
     return (
         <div className="app-layout">
             <aside className="sidebar">

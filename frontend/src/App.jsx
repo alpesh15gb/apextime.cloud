@@ -13,6 +13,7 @@ import AcademicStructure from './pages/AcademicStructure';
 import Students from './pages/Students';
 import Announcements from './pages/Announcements';
 import Devices from './pages/Devices';
+import Tenants from './pages/Tenants';
 import './index.css';
 
 function ProtectedRoute({ children, adminOnly }) {
@@ -41,7 +42,9 @@ function AppRoutes() {
         <Route path="academic" element={<AcademicStructure />} />
         <Route path="students" element={<Students />} />
         <Route path="announcements" element={<Announcements />} />
+        <Route path="announcements" element={<Announcements />} />
         <Route path="devices" element={<Devices />} />
+        <Route path="tenants" element={<Tenants />} />
       </Route>
 
       {/* Employee portal */}
