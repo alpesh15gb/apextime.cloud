@@ -134,9 +134,36 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
                     });
 
                     // Find employee by code
-                    const employee = await prisma.employee.findFirst({
+                    let employee = await prisma.employee.findFirst({
                         where: { tenantId: device.tenantId, employeeCode: userId },
                     });
+
+                    if (!employee) {
+                        try {
+                            // Auto-create employee from device user
+                            const newContact = await prisma.contact.create({
+                                data: {
+                                    tenantId: device.tenantId,
+                                    firstName: 'Device User',
+                                    lastName: userId,
+                                },
+                            });
+
+                            employee = await prisma.employee.create({
+                                data: {
+                                    tenantId: device.tenantId,
+                                    contactId: newContact.id,
+                                    employeeCode: userId,
+                                    joiningDate: new Date(),
+                                    type: 'full_time', // default
+                                    status: 'active',
+                                },
+                            });
+                            console.log(`[iClock] Auto-created employee ${userId} from device ${SN}`);
+                        } catch (err) {
+                            console.error(`[iClock] Failed to auto-create employee ${userId}:`, err);
+                        }
+                    }
 
                     if (employee) {
                         const dateStr = dayjs(punchTime).format('YYYY-MM-DD');
