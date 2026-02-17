@@ -184,8 +184,8 @@ router.put('/:uuid', requireRole('admin', 'super_admin'), async (req, res, next)
             // Update employee
             const employeeData = {};
             if (employeeCode) employeeData.employeeCode = employeeCode;
-            if (departmentId !== undefined) employeeData.departmentId = departmentId;
-            if (designationId !== undefined) employeeData.designationId = designationId;
+            if (departmentId !== undefined) employeeData.departmentId = departmentId ? parseInt(departmentId) : null;
+            if (designationId !== undefined) employeeData.designationId = designationId ? parseInt(designationId) : null;
             if (joiningDate) employeeData.joiningDate = new Date(joiningDate);
             if (leavingDate !== undefined) employeeData.leavingDate = leavingDate ? new Date(leavingDate) : null;
             if (type) employeeData.type = type;
