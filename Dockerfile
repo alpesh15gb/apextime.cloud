@@ -15,4 +15,5 @@ COPY . .
 # Expose backend port
 EXPOSE 5001
 
-CMD ["node", "src/index.js"]
+# Run migrations and start the server
+CMD ["/bin/sh", "-c", "npx prisma db push && node src/index.js"]
