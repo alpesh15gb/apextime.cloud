@@ -226,7 +226,24 @@ router.get(['/getrequest', '/getrequest.aspx'], async (req, res, next) => {
             });
         }
 
-        // For now, no pending commands
+        // Check for pending commands
+        const cmd = await prisma.deviceCommand.findFirst({
+            where: { deviceId: device.id, status: 'pending' },
+            orderBy: { createdAt: 'asc' },
+        });
+
+        if (cmd) {
+            // Send command: C:ID:COMMAND
+            // Example: C:1:DATA QUERY ATTLOG ...
+            const payload = `C:${cmd.id}:${cmd.command}`;
+            await prisma.deviceCommand.update({
+                where: { id: cmd.id },
+                data: { status: 'sent' },
+            });
+            console.log(`[iClock] Sending command to ${SN}: ${payload}`);
+            return res.send(payload);
+        }
+
         res.send('OK');
     } catch (error) {
         console.error('[iClock] GET request error:', error);
@@ -238,8 +255,31 @@ router.get(['/getrequest', '/getrequest.aspx'], async (req, res, next) => {
 // POST /iclock/devicecmd — Device command response
 router.post(['/devicecmd', '/devicecmd.aspx'], async (req, res, next) => {
     try {
+        // ID=123&Return=0
+        let { ID, Return } = req.body;
+
+        // Fallback to query if body empty
+        if (!ID && req.query.ID) {
+            ID = req.query.ID;
+            Return = req.query.Return;
+        }
+
+        if (ID) {
+            const cmdId = parseInt(ID);
+            // Update command status
+            await prisma.deviceCommand.updateMany({
+                where: { id: cmdId },
+                data: {
+                    status: Return == 0 ? 'executed' : 'failed',
+                    response: JSON.stringify(req.body || req.query),
+                    updatedAt: new Date(),
+                },
+            });
+            console.log(`[iClock] Command ${cmdId} response: ${Return}`);
+        }
         res.send('OK');
     } catch (error) {
+        console.error('[iClock] devicecmd error:', error);
         res.send('OK');
     }
 });

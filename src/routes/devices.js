@@ -80,6 +80,27 @@ router.get('/:uuid/logs', requireRole('admin', 'super_admin'), async (req, res, 
     } catch (error) { next(error); }
 });
 
+// POST /api/devices/:uuid/sync
+router.post('/:uuid/sync', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const device = await prisma.device.findUnique({ where: { uuid: req.params.uuid } });
+        if (!device || device.tenantId !== req.tenantId) {
+            return res.status(404).json({ error: 'Device not found' });
+        }
+
+        // Queue command to fetch all logs
+        await prisma.deviceCommand.create({
+            data: {
+                deviceId: device.id,
+                command: "DATA QUERY ATTLOG StartTime=2000-01-01 00:00:00\tEndTime=2099-12-31 23:59:59",
+                status: 'pending',
+            },
+        });
+
+        res.json({ message: 'Sync command queued' });
+    } catch (error) { next(error); }
+});
+
 // DELETE /api/devices/:uuid
 router.delete('/:uuid', requireRole('admin', 'super_admin'), async (req, res, next) => {
     try {

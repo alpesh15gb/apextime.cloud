@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import dayjs from 'dayjs';
-import { Plus, HardDrive, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Plus, HardDrive, RefreshCw, Wifi, WifiOff, Download } from 'lucide-react';
 
 export default function Devices() {
     const [devices, setDevices] = useState([]);
@@ -24,6 +24,14 @@ export default function Devices() {
         } catch (err) { alert('Failed'); }
     };
 
+    const syncDevice = async (uuid) => {
+        if (!confirm('This will command the device to upload ALL previous attendance logs. This may take a few minutes. Continue?')) return;
+        try {
+            await api.post(`/devices/${uuid}/sync`);
+            alert('Success: Command queued! The device will start uploading data within 30-60 seconds (next heartbeat).');
+        } catch (err) { alert(err.response?.data?.message || 'Failed to queue command'); }
+    };
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -43,7 +51,10 @@ export default function Devices() {
                                 <td>{d.status === 'active' ? <span className="badge badge-success"><Wifi size={10} /> Active</span> : <span className="badge badge-danger"><WifiOff size={10} /> Offline</span>}</td>
                                 <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{d.lastSeenAt ? dayjs(d.lastSeenAt).format('DD MMM hh:mm A') : 'Never'}</td>
                                 <td>{d._count?.logs || 0}</td>
-                                <td><button className="btn btn-ghost btn-sm" onClick={() => regenerateToken(d.uuid)}><RefreshCw size={14} /> Token</button></td>
+                                <td>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => regenerateToken(d.uuid)} title="New Token"><RefreshCw size={14} /></button>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => syncDevice(d.uuid)} title="Pull Past Logs"><Download size={14} /> Sync</button>
+                                </td>
                             </tr>
                         ))}
                         {devices.length === 0 && <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No devices registered</td></tr>}

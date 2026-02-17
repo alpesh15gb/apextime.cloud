@@ -636,8 +636,24 @@ model Device {
 
   tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   logs   DeviceLog[]
+  commands DeviceCommand[]
 
   @@map("devices")
+}
+
+model DeviceCommand {
+  id        Int      @id @default(autoincrement())
+  deviceId  Int      @map("device_id")
+  command   String
+  status    String   @default("pending") // pending, sent, executed, failed
+  response  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, status])
+  @@map("device_commands")
 }
 
 model DeviceLog {
