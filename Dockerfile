@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 5001
 
 # Run migrations and start the server
-CMD ["/bin/sh", "-c", "npx prisma db push && node src/index.js"]
+CMD ["/bin/sh", "-c", "npx prisma db push && npx prisma db seed && node src/index.js"]
