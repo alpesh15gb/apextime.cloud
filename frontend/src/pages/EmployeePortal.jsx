@@ -49,13 +49,21 @@ export default function EmployeePortal() {
     const handlePunch = async () => {
         setPunching(true);
         try {
-            // Get GPS location
             let latitude = 0, longitude = 0;
             try {
-                const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 }));
+                const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: true }));
                 latitude = pos.coords.latitude;
                 longitude = pos.coords.longitude;
-            } catch (e) { console.warn('GPS error:', e); }
+            } catch (e) {
+                console.error('GPS error:', e);
+                let msg = 'Failed to get location.';
+                if (e.code === 1) msg = 'Location permission denied. Please enable location access in your browser settings.';
+                else if (e.code === 2) msg = 'Location unavailable. Ensure GPS is on.';
+                else if (e.code === 3) msg = 'Location request timed out.';
+                alert(msg);
+                setPunching(false);
+                return;
+            }
 
             // Create form data
             const formData = new FormData();
