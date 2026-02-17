@@ -205,7 +205,19 @@ export default function Reports() {
             <style>{`
                 @media print {
                     @page { size: landscape; margin: 5mm; }
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+                    
+                    /* Force ALL text to be black */
+                    .printable, .printable * { 
+                        color: #000 !important; 
+                        background-color: transparent; /* Reset backgrounds */
+                    }
+
+                    /* Re-apply specific backgrounds for visual cues */
+                    .printable td[style*="#ddd"] { background-color: #ddd !important; }
+                    .printable td[style*="#f0f0f0"] { background-color: #f0f0f0 !important; }
+                    .printable th[style*="#eee"] { background-color: #eee !important; }
+
                     .no-print { display: none !important; }
                     .app-layout { padding: 0 !important; margin: 0 !important; }
                     .sidebar, .top-bar { display: none !important; }
@@ -214,8 +226,9 @@ export default function Reports() {
                     .printable { width: 100%; max-width: 100%; }
                     h3 { margin-top: 0; }
                     
-                    /* Hide browser headers/footers */
-                    /* Note: Some browsers force this, but we can try */
+                    /* Sharpen borders */
+                    .report-employee-row { border: 1px solid #000 !important; }
+                    th, td { border-color: #000 !important; }
                 }
             `}</style>
         </div>
