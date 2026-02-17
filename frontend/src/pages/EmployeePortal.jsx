@@ -89,9 +89,11 @@ export default function EmployeePortal() {
             }
             loadDashboard();
         } catch (err) {
-            alert(err.response?.data?.error || 'Punch failed');
+            console.error(err);
+            alert(`Error: ${err.message}\n${JSON.stringify(err.response?.data || {})}`);
         } finally {
             setPunching(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
