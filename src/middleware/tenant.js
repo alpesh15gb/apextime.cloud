@@ -8,6 +8,8 @@ const prisma = require('../lib/prisma');
 async function tenantMiddleware(req, res, next) {
     try {
         let slug = null;
+        const host = req.hostname || req.headers.host?.split(':')[0];
+        console.log(`[TenantMiddleware] Host: ${host}, URL: ${req.url}`);
 
         // 1. Check X-Tenant-Slug header (for API testing)
         if (req.headers['x-tenant-slug']) {
@@ -25,7 +27,7 @@ async function tenantMiddleware(req, res, next) {
                 const isIp = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(host);
                 if (!isIp && parts.length >= 2) {
                     const sub = parts[0];
-                    if (sub !== 'www' && sub !== 'api' && sub !== 'admin') {
+                    if (sub !== 'www' && sub !== 'api' && sub !== 'admin' && sub !== 'apextime') {
                         slug = sub;
                     }
                 }
