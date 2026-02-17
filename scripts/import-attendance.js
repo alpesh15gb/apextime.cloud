@@ -48,11 +48,18 @@ async function main() {
     if (!desig) desig = await prisma.designation.create({ data: { tenantId: tenant.id, name: 'Staff', departmentId: dept.id } });
 
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (i === 0) console.log(`DEBUG: First line content: "${line}"`);
+
         // Parse CSV Line
-        // Assuming format: 1,1,32,MOSHA,1,FP,DutyOn,0,0,9/11/2025 8:25
         const cols = line.split(',');
-        if (cols.length < 10) continue;
+        if (i === 0) console.log(`DEBUG: Columns found: ${cols.length}`);
+
+        if (cols.length < 10) {
+            if (i < 5) console.warn(`Skipping line ${i + 1}: Not enough columns (${cols.length})`);
+            continue;
+        }
 
         const empCode = cols[2]?.trim();
         const name = cols[3]?.trim();
