@@ -196,9 +196,19 @@ router.get(['/getrequest', '/getrequest.aspx'], async (req, res, next) => {
         const { SN } = req.query;
         if (!SN) return res.send('OK');
 
+        // Update last seen heartbeat
+        const device = await prisma.device.findFirst({ where: { serialNumber: SN } });
+        if (device) {
+            await prisma.device.update({
+                where: { id: device.id },
+                data: { lastSeenAt: new Date(), status: 'active' },
+            });
+        }
+
         // For now, no pending commands
         res.send('OK');
     } catch (error) {
+        console.error('[iClock] GET request error:', error);
         res.send('OK');
     }
 });
