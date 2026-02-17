@@ -205,6 +205,16 @@ export default function Reports() {
             <style>{`
                 @media print {
                     @page { size: landscape; margin: 5mm; }
+                    
+                    /* CRITICAL: Reset main layout scrolling to allow full page printing */
+                    html, body, #root, .app-layout, .main-content, .content-area {
+                        height: auto !important;
+                        min-height: auto !important;
+                        overflow: visible !important;
+                        overflow-y: visible !important;
+                        display: block !important;
+                    }
+
                     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
                     
                     /* Force ALL text to be black */
@@ -219,15 +229,14 @@ export default function Reports() {
                     .printable th[style*="#eee"] { background-color: #eee !important; }
 
                     .no-print { display: none !important; }
-                    .app-layout { padding: 0 !important; margin: 0 !important; }
+                    
                     .sidebar, .top-bar { display: none !important; }
-                    .main-content { margin: 0 !important; padding: 0 !important; }
-                    .content-area { padding: 0 !important; }
+                    
                     .printable { width: 100%; max-width: 100%; }
                     h3 { margin-top: 0; }
                     
                     /* Sharpen borders */
-                    .report-employee-row { border: 1px solid #000 !important; }
+                    .report-employee-row { border: 1px solid #000 !important; break-inside: avoid; page-break-inside: avoid; }
                     th, td { border-color: #000 !important; }
                 }
             `}</style>
