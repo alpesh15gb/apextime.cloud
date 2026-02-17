@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import dayjs from 'dayjs';
-import { Plus, HardDrive, RefreshCw, Wifi, WifiOff, Download } from 'lucide-react';
+import { Plus, HardDrive, RefreshCw, Wifi, WifiOff, Download, Trash2 } from 'lucide-react';
 
 export default function Devices() {
     const [devices, setDevices] = useState([]);
@@ -32,6 +32,14 @@ export default function Devices() {
         } catch (err) { alert(err.response?.data?.message || 'Failed to queue command'); }
     };
 
+    const deleteDevice = async (uuid) => {
+        if (!confirm('Are you sure you want to delete this device? Associated logs may be kept but the device connection will be lost.')) return;
+        try {
+            await api.delete(`/devices/${uuid}`);
+            loadData();
+        } catch (err) { alert('Failed to delete device'); }
+    };
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -54,6 +62,7 @@ export default function Devices() {
                                 <td>
                                     <button className="btn btn-ghost btn-sm" onClick={() => regenerateToken(d.uuid)} title="New Token"><RefreshCw size={14} /></button>
                                     <button className="btn btn-ghost btn-sm" onClick={() => syncDevice(d.uuid)} title="Pull Past Logs"><Download size={14} /> Sync</button>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => deleteDevice(d.uuid)} title="Delete Device" style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
                                 </td>
                             </tr>
                         ))}
