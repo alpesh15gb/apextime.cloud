@@ -2,9 +2,13 @@
  * ESSL ADMS / iClock Protocol Handler
  * Handles communication with ESSL biometric devices
  */
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
 const prisma = require('../lib/prisma');
 const dayjs = require('dayjs');
+
+// Parse raw text body for ADMS updates (sometimes sent as text/plain or octet-stream)
+router.use(express.text({ type: '*/*', limit: '10mb' }));
 
 // GET /iclock/cdata — Device registration & config pull
 // GET /iclock/cdata — Device registration & config pull
@@ -84,7 +88,7 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
             data: { lastSeenAt: new Date(), status: 'active' },
         });
 
-        const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+        const rawBody = (typeof req.body === 'string' ? req.body : JSON.stringify(req.body)) || '';
 
         if (table === 'ATTLOG' || !table) {
             // Parse attendance log lines
@@ -227,21 +231,24 @@ router.get(['/getrequest', '/getrequest.aspx'], async (req, res, next) => {
         }
 
         // Check for pending commands
-        const cmd = await prisma.deviceCommand.findFirst({
-            where: { deviceId: device.id, status: 'pending' },
-            orderBy: { createdAt: 'asc' },
-        });
-
-        if (cmd) {
-            // Send command: C:ID:COMMAND
-            // Example: C:1:DATA QUERY ATTLOG ...
-            const payload = `C:${cmd.id}:${cmd.command}`;
-            await prisma.deviceCommand.update({
-                where: { id: cmd.id },
-                data: { status: 'sent' },
+        // Check for pending commands
+        if (device) {
+            const cmd = await prisma.deviceCommand.findFirst({
+                where: { deviceId: device.id, status: 'pending' },
+                orderBy: { createdAt: 'asc' },
             });
-            console.log(`[iClock] Sending command to ${SN}: ${payload}`);
-            return res.send(payload);
+
+            if (cmd) {
+                // Send command: C:ID:COMMAND
+                // Example: C:1:DATA QUERY ATTLOG ...
+                const payload = `C:${cmd.id}:${cmd.command}`;
+                await prisma.deviceCommand.update({
+                    where: { id: cmd.id },
+                    data: { status: 'sent' },
+                });
+                console.log(`[iClock] Sending command to ${SN}: ${payload}`);
+                return res.send(payload);
+            }
         }
 
         res.send('OK');
