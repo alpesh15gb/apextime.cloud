@@ -1,0 +1,112 @@
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import {
+    LayoutDashboard, Users, Building2, Clock, CheckCircle2,
+    CalendarOff, GraduationCap, UserSquare2, Megaphone,
+    HardDrive, LogOut, Settings
+} from 'lucide-react';
+
+export default function Layout() {
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    const navItems = [
+        {
+            section: 'Overview', items: [
+                { to: '/', icon: <LayoutDashboard />, label: 'Dashboard' },
+            ]
+        },
+        {
+            section: 'People', items: [
+                { to: '/employees', icon: <Users />, label: 'Employees' },
+                { to: '/departments', icon: <Building2 />, label: 'Departments' },
+                { to: '/students', icon: <UserSquare2 />, label: 'Students' },
+            ]
+        },
+        {
+            section: 'Attendance', items: [
+                { to: '/attendance', icon: <Clock />, label: 'Timesheets' },
+                { to: '/approvals', icon: <CheckCircle2 />, label: 'Approvals' },
+                { to: '/leave-requests', icon: <CalendarOff />, label: 'Leave Requests' },
+            ]
+        },
+        {
+            section: 'Academic', items: [
+                { to: '/academic', icon: <GraduationCap />, label: 'Structure' },
+            ]
+        },
+        {
+            section: 'System', items: [
+                { to: '/announcements', icon: <Megaphone />, label: 'Announcements' },
+                { to: '/devices', icon: <HardDrive />, label: 'Devices' },
+            ]
+        },
+    ];
+
+    return (
+        <div className="app-layout">
+            <aside className="sidebar">
+                <div className="sidebar-header">
+                    <div className="sidebar-brand">
+                        <div className="sidebar-brand-icon">AT</div>
+                        <div>
+                            <h1>ApexTime</h1>
+                            <p>{user?.tenant?.name || 'Cloud'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <nav className="sidebar-nav">
+                    {navItems.map((section) => (
+                        <div className="nav-section" key={section.section}>
+                            <div className="nav-section-title">{section.section}</div>
+                            {section.items.map((item) => (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    end={item.to === '/'}
+                                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                                >
+                                    {item.icon}
+                                    <span>{item.label}</span>
+                                </NavLink>
+                            ))}
+                        </div>
+                    ))}
+                </nav>
+
+                <div style={{ padding: '12px', borderTop: '1px solid var(--border)' }}>
+                    <div className="nav-item" onClick={handleLogout} style={{ color: 'var(--danger)' }}>
+                        <LogOut />
+                        <span>Logout</span>
+                    </div>
+                </div>
+            </aside>
+
+            <main className="main-content">
+                <header className="top-bar">
+                    <div className="top-bar-left">
+                        <h2 className="page-title"></h2>
+                    </div>
+                    <div className="top-bar-right">
+                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            {user?.employee?.name || user?.username}
+                        </span>
+                        <div className="user-avatar">
+                            {(user?.employee?.name?.[0] || user?.username?.[0] || 'U').toUpperCase()}
+                        </div>
+                    </div>
+                </header>
+
+                <div className="content-area">
+                    <Outlet />
+                </div>
+            </main>
+        </div>
+    );
+}

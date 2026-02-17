@@ -1,0 +1,43 @@
+{
+  "name": "apextime-cloud",
+  "version": "1.0.0",
+  "description": "ApexTime Cloud - Multi-Tenant School ERP",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "db:push": "npx prisma db push",
+    "db:migrate": "npx prisma migrate dev",
+    "db:seed": "node prisma/seed.js",
+    "db:studio": "npx prisma studio",
+    "build": "echo 'No build step needed for backend'"
+  },
+  "keywords": [
+    "school",
+    "erp",
+    "attendance",
+    "multi-tenant"
+  ],
+  "author": "ApexTime",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^7.4.0",
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.6",
+    "dayjs": "^1.11.19",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "prisma": "^7.4.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
+}

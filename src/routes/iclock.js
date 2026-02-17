@@ -1,0 +1,212 @@
+/**
+ * ESSL ADMS / iClock Protocol Handler
+ * Handles communication with ESSL biometric devices
+ */
+const router = require('express').Router();
+const prisma = require('../lib/prisma');
+const dayjs = require('dayjs');
+
+// GET /iclock/cdata — Device registration & config pull
+router.get('/cdata', async (req, res, next) => {
+    try {
+        const { SN, options, pushver, language } = req.query;
+
+        if (!SN) {
+            return res.status(400).send('ERROR: No serial number');
+        }
+
+        // Find device by serial number
+        const device = await prisma.device.findFirst({
+            where: { serialNumber: SN },
+        });
+
+        if (!device) {
+            console.log(`[iClock] Unknown device: ${SN}`);
+            // Auto-register the device (find any tenant's device with this SN)
+            return res.send('OK');
+        }
+
+        // Update last seen
+        await prisma.device.update({
+            where: { id: device.id },
+            data: { lastSeenAt: new Date(), status: 'active' },
+        });
+
+        if (options === 'all') {
+            // Device is requesting its full config
+            const config = [
+                'GET OPTION FROM: ' + SN,
+                'Stamp=9999',
+                'OpStamp=9999',
+                'PhotoStamp=9999',
+                'ErrorDelay=60',
+                'Delay=30',
+                'TransTimes=00:00;14:05',
+                'TransInterval=1',
+                'TransFlag=TransData AttLog\tOpLog\tAttPhoto\tEnrollUser\tEnrollFP\tFPImag',
+                'ServerVer=2.4.1',
+                'ATTLOGStamp=0',
+                'OPERLOGStamp=0',
+            ].join('\r\n');
+            return res.send(config);
+        }
+
+        res.send('OK');
+    } catch (error) {
+        console.error('[iClock] GET error:', error);
+        res.status(500).send('ERROR');
+    }
+});
+
+// POST /iclock/cdata — Receive attendance/operation logs
+router.post('/cdata', async (req, res, next) => {
+    try {
+        const { SN, table } = req.query;
+
+        if (!SN) {
+            return res.status(400).send('ERROR: No SN');
+        }
+
+        const device = await prisma.device.findFirst({
+            where: { serialNumber: SN },
+        });
+
+        if (!device) {
+            console.log(`[iClock] POST from unknown device: ${SN}`);
+            return res.send('OK: 0');
+        }
+
+        // Update last seen
+        await prisma.device.update({
+            where: { id: device.id },
+            data: { lastSeenAt: new Date(), status: 'active' },
+        });
+
+        const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+
+        if (table === 'ATTLOG' || !table) {
+            // Parse attendance log lines
+            // Format: userId\tdateTime\tverifyMode\tinOutMode\tworkCode
+            const lines = rawBody.split('\n').filter(l => l.trim());
+            let processed = 0;
+
+            for (const line of lines) {
+                try {
+                    const parts = line.split('\t');
+                    if (parts.length < 2) continue;
+
+                    const userId = parts[0].trim();
+                    const dateTimeStr = parts[1].trim();
+                    const verifyMode = parts[2]?.trim() || '0';
+                    const inOutMode = parts[3]?.trim() || '0';
+
+                    if (!userId || !dateTimeStr) continue;
+
+                    // Log the raw data
+                    const punchTime = dayjs(dateTimeStr, 'YYYY-MM-DD HH:mm:ss').toDate();
+
+                    await prisma.deviceLog.create({
+                        data: {
+                            tenantId: device.tenantId,
+                            deviceId: device.id,
+                            rawData: line,
+                            userId,
+                            punchTime,
+                            processed: false,
+                        },
+                    });
+
+                    // Find employee by code
+                    const employee = await prisma.employee.findFirst({
+                        where: { tenantId: device.tenantId, employeeCode: userId },
+                    });
+
+                    if (employee) {
+                        const dateStr = dayjs(punchTime).format('YYYY-MM-DD');
+
+                        // Check for existing open timesheet
+                        const existingTimesheet = await prisma.timesheet.findFirst({
+                            where: {
+                                employeeId: employee.id,
+                                date: new Date(dateStr),
+                                outAt: null,
+                            },
+                            orderBy: { inAt: 'desc' },
+                        });
+
+                        if (existingTimesheet) {
+                            // Clock out — only if > 2 min difference
+                            const diff = dayjs(punchTime).diff(dayjs(existingTimesheet.inAt), 'minute');
+                            if (diff >= 2) {
+                                await prisma.timesheet.update({
+                                    where: { id: existingTimesheet.id },
+                                    data: { outAt: punchTime },
+                                });
+                            }
+                        } else {
+                            // Clock in
+                            await prisma.timesheet.create({
+                                data: {
+                                    tenantId: device.tenantId,
+                                    employeeId: employee.id,
+                                    date: new Date(dateStr),
+                                    inAt: punchTime,
+                                    source: 'device',
+                                    status: 'auto_approved',
+                                    meta: { device_sn: SN, verify_mode: verifyMode, in_out_mode: inOutMode },
+                                },
+                            });
+                        }
+
+                        // Mark log as processed
+                        await prisma.deviceLog.updateMany({
+                            where: { deviceId: device.id, userId, punchTime, processed: false },
+                            data: { processed: true },
+                        });
+                    }
+
+                    processed++;
+                } catch (lineError) {
+                    console.error(`[iClock] Error processing line: ${line}`, lineError.message);
+                }
+            }
+
+            console.log(`[iClock] Device ${SN}: processed ${processed}/${lines.length} records`);
+            return res.send(`OK: ${processed}`);
+        }
+
+        if (table === 'OPERLOG') {
+            // Operation log — ignore for now
+            return res.send('OK: 0');
+        }
+
+        res.send('OK: 0');
+    } catch (error) {
+        console.error('[iClock] POST error:', error);
+        res.status(500).send('ERROR');
+    }
+});
+
+// GET /iclock/getrequest — Device polls for pending commands
+router.get('/getrequest', async (req, res, next) => {
+    try {
+        const { SN } = req.query;
+        if (!SN) return res.send('OK');
+
+        // For now, no pending commands
+        res.send('OK');
+    } catch (error) {
+        res.send('OK');
+    }
+});
+
+// POST /iclock/devicecmd — Device command response
+router.post('/devicecmd', async (req, res, next) => {
+    try {
+        res.send('OK');
+    } catch (error) {
+        res.send('OK');
+    }
+});
+
+module.exports = router;

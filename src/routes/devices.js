@@ -1,0 +1,95 @@
+const router = require('express').Router();
+const prisma = require('../lib/prisma');
+const { requireRole } = require('../middleware/auth');
+const { v4: uuidv4 } = require('uuid');
+
+// GET /api/devices
+router.get('/', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const devices = await prisma.device.findMany({
+            where: { tenantId: req.tenantId },
+            include: { _count: { select: { logs: true } } },
+            orderBy: { name: 'asc' },
+        });
+        res.json(devices);
+    } catch (error) { next(error); }
+});
+
+// POST /api/devices
+router.post('/', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const { name, serialNumber, ipAddress, type, config } = req.body;
+        const device = await prisma.device.create({
+            data: {
+                tenantId: req.tenantId,
+                name,
+                serialNumber,
+                ipAddress,
+                type: type || 'biometric',
+                token: uuidv4(), // Auto-generate token
+                config: config || {},
+            },
+        });
+        res.status(201).json(device);
+    } catch (error) { next(error); }
+});
+
+// PUT /api/devices/:uuid
+router.put('/:uuid', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const { name, serialNumber, ipAddress, type, status, config } = req.body;
+        const device = await prisma.device.update({
+            where: { uuid: req.params.uuid },
+            data: { name, serialNumber, ipAddress, type, status, config },
+        });
+        res.json(device);
+    } catch (error) { next(error); }
+});
+
+// POST /api/devices/:uuid/regenerate-token
+router.post('/:uuid/regenerate-token', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const device = await prisma.device.update({
+            where: { uuid: req.params.uuid },
+            data: { token: uuidv4() },
+        });
+        res.json({ token: device.token });
+    } catch (error) { next(error); }
+});
+
+// GET /api/devices/:uuid/logs
+router.get('/:uuid/logs', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const device = await prisma.device.findUnique({ where: { uuid: req.params.uuid } });
+        if (!device || device.tenantId !== req.tenantId) {
+            return res.status(404).json({ error: 'Device not found' });
+        }
+
+        const { page = 1, limit = 100 } = req.query;
+        const [logs, total] = await Promise.all([
+            prisma.deviceLog.findMany({
+                where: { deviceId: device.id },
+                orderBy: { createdAt: 'desc' },
+                skip: (parseInt(page) - 1) * parseInt(limit),
+                take: parseInt(limit),
+            }),
+            prisma.deviceLog.count({ where: { deviceId: device.id } }),
+        ]);
+
+        res.json({ data: logs, pagination: { total, page: parseInt(page), limit: parseInt(limit) } });
+    } catch (error) { next(error); }
+});
+
+// DELETE /api/devices/:uuid
+router.delete('/:uuid', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const device = await prisma.device.findUnique({ where: { uuid: req.params.uuid } });
+        if (!device || device.tenantId !== req.tenantId) {
+            return res.status(404).json({ error: 'Device not found' });
+        }
+        await prisma.device.delete({ where: { id: device.id } });
+        res.json({ message: 'Device deleted' });
+    } catch (error) { next(error); }
+});
+
+module.exports = router;

@@ -1,0 +1,72 @@
+const prisma = require('../lib/prisma');
+
+/**
+ * Multi-tenant middleware
+ * Resolves tenant from subdomain or X-Tenant-Slug header
+ * Sets req.tenant and req.tenantId
+ */
+async function tenantMiddleware(req, res, next) {
+    try {
+        let slug = null;
+
+        // 1. Check X-Tenant-Slug header (for API testing)
+        if (req.headers['x-tenant-slug']) {
+            slug = req.headers['x-tenant-slug'];
+        }
+
+        // 2. Extract from subdomain (school1.apextime.cloud)
+        if (!slug) {
+            const host = req.hostname || req.headers.host?.split(':')[0];
+            if (host) {
+                const parts = host.split('.');
+                // subdomain.apextime.cloud = 3 parts
+                // subdomain.localhost = 2 parts (dev)
+                if (parts.length >= 2) {
+                    const sub = parts[0];
+                    if (sub !== 'www' && sub !== 'api' && sub !== 'admin') {
+                        slug = sub;
+                    }
+                }
+            }
+        }
+
+        // 3. Check query param (fallback for dev)
+        if (!slug && req.query.tenant) {
+            slug = req.query.tenant;
+        }
+
+        if (!slug) {
+            // No tenant context - allow auth routes to handle it
+            req.tenantId = null;
+            req.tenant = null;
+            return next();
+        }
+
+        const tenant = await prisma.tenant.findUnique({
+            where: { slug },
+        });
+
+        if (!tenant) {
+            return res.status(404).json({
+                error: 'Tenant not found',
+                message: `No organization found for "${slug}"`,
+            });
+        }
+
+        if (tenant.status !== 'active') {
+            return res.status(403).json({
+                error: 'Tenant suspended',
+                message: 'This organization account is currently suspended.',
+            });
+        }
+
+        req.tenant = tenant;
+        req.tenantId = tenant.id;
+        next();
+    } catch (error) {
+        console.error('Tenant middleware error:', error);
+        res.status(500).json({ error: 'Failed to resolve tenant' });
+    }
+}
+
+module.exports = { tenantMiddleware };

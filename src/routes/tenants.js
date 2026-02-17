@@ -1,0 +1,84 @@
+const router = require('express').Router();
+const bcrypt = require('bcryptjs');
+const prisma = require('../lib/prisma');
+const { requireRole } = require('../middleware/auth');
+
+// GET /api/tenants - Super admin only
+router.get('/', requireRole('super_admin'), async (req, res, next) => {
+    try {
+        const tenants = await prisma.tenant.findMany({
+            include: {
+                _count: { select: { users: true, employees: true, students: true } },
+            },
+            orderBy: { name: 'asc' },
+        });
+        res.json(tenants);
+    } catch (error) { next(error); }
+});
+
+// POST /api/tenants - Create new tenant with admin user
+router.post('/', requireRole('super_admin'), async (req, res, next) => {
+    try {
+        const { name, slug, domain, adminUsername, adminPassword } = req.body;
+
+        if (!name || !slug) {
+            return res.status(400).json({ error: 'Name and slug are required' });
+        }
+
+        const result = await prisma.$transaction(async (tx) => {
+            const tenant = await tx.tenant.create({
+                data: { name, slug: slug.toLowerCase(), domain },
+            });
+
+            // Create admin user
+            const passwordHash = await bcrypt.hash(adminPassword || 'admin123', 10);
+            await tx.user.create({
+                data: {
+                    tenantId: tenant.id,
+                    username: adminUsername || 'admin',
+                    passwordHash,
+                    role: 'admin',
+                },
+            });
+
+            // Seed default attendance types
+            await tx.attendanceType.createMany({
+                data: [
+                    { tenantId: tenant.id, name: 'Present', code: 'P', category: 'present', color: '#22c55e' },
+                    { tenantId: tenant.id, name: 'Absent', code: 'A', category: 'absent', color: '#ef4444' },
+                    { tenantId: tenant.id, name: 'Half Day', code: 'HD', category: 'half_day', color: '#f59e0b' },
+                    { tenantId: tenant.id, name: 'Late', code: 'L', category: 'late', color: '#f97316' },
+                    { tenantId: tenant.id, name: 'On Leave', code: 'OL', category: 'on_leave', color: '#8b5cf6' },
+                ],
+            });
+
+            // Seed default leave types
+            await tx.leaveType.createMany({
+                data: [
+                    { tenantId: tenant.id, name: 'Casual Leave', code: 'CL', maxDays: 12, isPaid: true, color: '#3b82f6' },
+                    { tenantId: tenant.id, name: 'Sick Leave', code: 'SL', maxDays: 12, isPaid: true, color: '#ef4444' },
+                    { tenantId: tenant.id, name: 'Earned Leave', code: 'EL', maxDays: 15, isPaid: true, color: '#22c55e' },
+                    { tenantId: tenant.id, name: 'Loss of Pay', code: 'LOP', maxDays: null, isPaid: false, color: '#6b7280' },
+                ],
+            });
+
+            return tenant;
+        });
+
+        res.status(201).json({ message: 'Tenant created', tenant: result });
+    } catch (error) { next(error); }
+});
+
+// PUT /api/tenants/:uuid
+router.put('/:uuid', requireRole('super_admin'), async (req, res, next) => {
+    try {
+        const { name, domain, status, config, logo } = req.body;
+        const tenant = await prisma.tenant.update({
+            where: { uuid: req.params.uuid },
+            data: { name, domain, status, config, logo },
+        });
+        res.json(tenant);
+    } catch (error) { next(error); }
+});
+
+module.exports = router;

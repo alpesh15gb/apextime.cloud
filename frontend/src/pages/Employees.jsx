@@ -1,0 +1,172 @@
+import { useState, useEffect } from 'react';
+import api from '../lib/api';
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
+
+export default function Employees() {
+    const [employees, setEmployees] = useState([]);
+    const [departments, setDepartments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [showModal, setShowModal] = useState(false);
+    const [editItem, setEditItem] = useState(null);
+    const [form, setForm] = useState({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '' });
+
+    const loadData = () => {
+        Promise.all([
+            api.get('/employees', { params: { search, limit: 100 } }),
+            api.get('/departments'),
+        ]).then(([empRes, deptRes]) => {
+            setEmployees(empRes.data.data || []);
+            setDepartments(deptRes.data || []);
+            setLoading(false);
+        }).catch(() => setLoading(false));
+    };
+
+    useEffect(() => { loadData(); }, [search]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            if (editItem) {
+                await api.put(`/employees/${editItem.uuid}`, form);
+            } else {
+                await api.post('/employees', { ...form, createUser: true, password: form.password || form.employeeCode });
+            }
+            setShowModal(false);
+            setEditItem(null);
+            setForm({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '' });
+            loadData();
+        } catch (err) {
+            alert(err.response?.data?.error || err.response?.data?.message || 'Failed to save');
+        }
+    };
+
+    const handleEdit = (emp) => {
+        setEditItem(emp);
+        setForm({
+            employeeCode: emp.employeeCode, firstName: emp.name?.split(' ')[0] || '', lastName: emp.name?.split(' ').slice(1).join(' ') || '',
+            email: emp.email || '', phone: emp.phone || '', gender: emp.gender || 'male',
+            departmentId: emp.departmentId || '', designationId: emp.designationId || '',
+            joiningDate: emp.joiningDate?.split('T')[0] || '', password: '',
+        });
+        setShowModal(true);
+    };
+
+    const handleDelete = async (uuid) => {
+        if (!confirm('Delete this employee?')) return;
+        try { await api.delete(`/employees/${uuid}`); loadData(); } catch (err) { alert('Failed to delete'); }
+    };
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '22px', fontWeight: 700 }}>Employees</h2>
+                <button className="btn btn-primary" onClick={() => { setEditItem(null); setForm({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '' }); setShowModal(true); }}>
+                    <Plus size={16} /> Add Employee
+                </button>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+                <div style={{ position: 'relative', maxWidth: '320px' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input className="form-input" style={{ paddingLeft: '36px' }} placeholder="Search by name, code, phone..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
+            </div>
+
+            <div className="card">
+                <table className="data-table">
+                    <thead><tr>
+                        <th>Code</th><th>Name</th><th>Department</th><th>Designation</th><th>Phone</th><th>Status</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody>
+                        {employees.map(emp => (
+                            <tr key={emp.uuid}>
+                                <td><strong>{emp.employeeCode}</strong></td>
+                                <td>{emp.name}</td>
+                                <td>{emp.department || '-'}</td>
+                                <td>{emp.designation || '-'}</td>
+                                <td>{emp.phone || '-'}</td>
+                                <td><span className={`badge badge-${emp.status === 'active' ? 'success' : 'danger'}`}>{emp.status}</span></td>
+                                <td style={{ display: 'flex', gap: '6px' }}>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(emp)}><Edit size={14} /></button>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(emp.uuid)}><Trash2 size={14} /></button>
+                                </td>
+                            </tr>
+                        ))}
+                        {employees.length === 0 && <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No employees found</td></tr>}
+                    </tbody>
+                </table>
+            </div>
+
+            {showModal && (
+                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="modal-title">{editItem ? 'Edit Employee' : 'Add Employee'}</h3>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}>✕</button>
+                        </div>
+                        <form onSubmit={handleSubmit}>
+                            <div className="modal-body">
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label className="form-label">Employee Code *</label>
+                                        <input className="form-input" value={form.employeeCode} onChange={e => setForm({ ...form, employeeCode: e.target.value })} required />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Gender</label>
+                                        <select className="form-select" value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}>
+                                            <option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label className="form-label">First Name *</label>
+                                        <input className="form-input" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} required />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Last Name</label>
+                                        <input className="form-input" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} />
+                                    </div>
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label className="form-label">Email</label>
+                                        <input className="form-input" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Phone</label>
+                                        <input className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                                    </div>
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label className="form-label">Department</label>
+                                        <select className="form-select" value={form.departmentId} onChange={e => setForm({ ...form, departmentId: e.target.value ? parseInt(e.target.value) : '' })}>
+                                            <option value="">Select</option>
+                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Joining Date</label>
+                                        <input className="form-input" type="date" value={form.joiningDate} onChange={e => setForm({ ...form, joiningDate: e.target.value })} />
+                                    </div>
+                                </div>
+                                {!editItem && (
+                                    <div className="form-group">
+                                        <label className="form-label">Password (default = employee code)</label>
+                                        <input className="form-input" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Leave blank to use employee code" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-primary">{editItem ? 'Update' : 'Create'}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
