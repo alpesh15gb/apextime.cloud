@@ -115,8 +115,8 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
                     // Log the raw data
                     const punchTime = dayjs(dateTimeStr, 'YYYY-MM-DD HH:mm:ss').toDate();
 
-                    // Check for existing log to prevent duplicates
-                    const existingLog = await prisma.deviceLog.findFirst({
+                    // Check for existing log
+                    let currentLog = await prisma.deviceLog.findFirst({
                         where: {
                             deviceId: device.id,
                             userId,
@@ -124,18 +124,22 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
                         },
                     });
 
-                    if (existingLog) continue;
-
-                    await prisma.deviceLog.create({
-                        data: {
-                            tenantId: device.tenantId,
-                            deviceId: device.id,
-                            rawData: line,
-                            userId,
-                            punchTime,
-                            processed: false,
-                        },
-                    });
+                    if (!currentLog) {
+                        currentLog = await prisma.deviceLog.create({
+                            data: {
+                                tenantId: device.tenantId,
+                                deviceId: device.id,
+                                rawData: line,
+                                userId,
+                                punchTime,
+                                processed: false,
+                            },
+                        });
+                    } else if (currentLog.processed) {
+                        // Already processed, skip
+                        continue;
+                    }
+                    // Else: Log exists but processed=false. Proceed to process it.
 
                     // Find employee by code
                     let employee = await prisma.employee.findFirst({
