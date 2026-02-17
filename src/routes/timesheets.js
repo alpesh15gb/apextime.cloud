@@ -98,9 +98,12 @@ router.get('/pending', requireRole('admin', 'super_admin'), async (req, res, nex
             inAt: t.inAt,
             outAt: t.outAt,
             source: t.source,
-            photoUrl: t.meta?.photo_url,
-            latitude: t.meta?.latitude,
-            longitude: t.meta?.longitude,
+            photoUrl: t.meta?.in?.photo_url || t.meta?.photo_url,
+            latitude: t.meta?.in?.latitude || t.meta?.latitude,
+            longitude: t.meta?.in?.longitude || t.meta?.longitude,
+            outPhotoUrl: t.meta?.out?.photo_url,
+            outLatitude: t.meta?.out?.latitude,
+            outLongitude: t.meta?.out?.longitude,
             createdAt: t.createdAt,
         })));
     } catch (error) { next(error); }

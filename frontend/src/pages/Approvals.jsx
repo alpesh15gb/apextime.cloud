@@ -59,22 +59,50 @@ export default function Approvals() {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
-                        {t.photoUrl && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Camera size={14} style={{ color: 'var(--text-muted)' }} />
-                                <img src={t.photoUrl} alt="Selfie" className="approval-photo" />
+                    {/* Evidence Section */}
+                    {t.source === 'mobile' && (
+                        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                {/* IN Evidence */}
+                                <div>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>PUNCH IN</div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        {t.photoUrl ? (
+                                            <a href={t.photoUrl} target="_blank" rel="noopener noreferrer">
+                                                <img src={t.photoUrl} alt="In Selfie" className="approval-photo" style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }} />
+                                            </a>
+                                        ) : <span style={{ fontSize: '11px', color: 'var(--danger)' }}>No Photo</span>}
+
+                                        {t.latitude ? (
+                                            <a href={`https://maps.google.com/?q=${t.latitude},${t.longitude}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <MapPin size={12} /> Map
+                                            </a>
+                                        ) : <span style={{ fontSize: '11px', color: 'var(--danger)' }}>No GPS</span>}
+                                    </div>
+                                </div>
+
+                                {/* OUT Evidence */}
+                                {t.outAt && (
+                                    <div>
+                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>PUNCH OUT</div>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            {t.outPhotoUrl ? (
+                                                <a href={t.outPhotoUrl} target="_blank" rel="noopener noreferrer">
+                                                    <img src={t.outPhotoUrl} alt="Out Selfie" className="approval-photo" style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }} />
+                                                </a>
+                                            ) : <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>-</span>}
+
+                                            {t.outLatitude && (
+                                                <a href={`https://maps.google.com/?q=${t.outLatitude},${t.outLongitude}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <MapPin size={12} /> Map
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                        {t.latitude && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                <MapPin size={14} />
-                                <a href={`https://maps.google.com/?q=${t.latitude},${t.longitude}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--info)' }}>
-                                    View Location
-                                </a>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
                     <div className="approval-actions">
                         <button className="btn btn-success btn-sm" onClick={() => handleApprove(t.uuid)}>

@@ -111,6 +111,13 @@ router.post('/punch', upload.single('photo'), async (req, res, next) => {
         const today = now.format('YYYY-MM-DD');
         const photoUrl = req.file ? `/uploads/punches/${req.file.filename}` : null;
 
+        if (!photoUrl) {
+            return res.status(400).json({ error: 'Selfie is mandatory for attendance punch' });
+        }
+        if (!latitude || !longitude || parseFloat(latitude) === 0) {
+            return res.status(400).json({ error: 'GPS location is mandatory. Please enable location services.' });
+        }
+
         // Check for open timesheet
         const openTimesheet = await prisma.timesheet.findFirst({
             where: { employeeId: employee.id, date: new Date(today), outAt: null, source: 'mobile' },
