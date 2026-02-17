@@ -71,18 +71,27 @@ export default function EmployeePortal() {
             formData.append('longitude', longitude);
 
             // Try to capture photo from file input
-            if (fileInputRef.current?.files?.[0]) {
-                formData.append('photo', fileInputRef.current.files[0]);
+            if (!fileInputRef.current?.files?.[0]) {
+                alert('Selfie is mandatory! Please take a selfie first.');
+                setPunching(false);
+                return;
             }
+
+            formData.append('photo', fileInputRef.current.files[0]);
 
             const res = await api.post('/portal/punch', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             alert(res.data.message);
+
+            // Clear preview
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+                document.getElementById('selfie-preview').style.display = 'none';
+            }
             loadDashboard();
         } catch (err) {
             alert(err.response?.data?.error || 'Punch failed');
         } finally {
             setPunching(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -146,7 +155,7 @@ export default function EmployeePortal() {
                             <div className="punch-time">{currentTime.format('hh:mm:ss')}</div>
                             <div className="punch-status">{currentTime.format('dddd, DD MMMM YYYY')}</div>
 
-                            <div style={{ margin: '24px 0 16px' }}>
+                            <div style={{ margin: '24px 0 16px', textAlign: 'center' }}>
                                 <input
                                     ref={fileInputRef}
                                     type="file"
@@ -154,17 +163,29 @@ export default function EmployeePortal() {
                                     capture="user"
                                     style={{ display: 'none' }}
                                     id="selfie-input"
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            // Force re-render or show preview
+                                            const reader = new FileReader();
+                                            reader.onload = (ev) => {
+                                                document.getElementById('selfie-preview').src = ev.target.result;
+                                                document.getElementById('selfie-preview').style.display = 'block';
+                                            };
+                                            reader.readAsDataURL(e.target.files[0]);
+                                        }
+                                    }}
                                 />
                                 <label
                                     htmlFor="selfie-input"
                                     style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px',
+                                        display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px',
                                         background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                                        color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                                        color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
                                     }}
                                 >
-                                    <Camera size={14} /> Take Selfie
+                                    <Camera size={16} /> {fileInputRef.current?.files?.[0] ? 'Retake Selfie' : 'Take Selfie'}
                                 </label>
+                                <img id="selfie-preview" src="" alt="Selfie Preview" style={{ display: 'none', width: '100px', height: '100px', objectFit: 'cover', borderRadius: '50%', margin: '10px auto', border: '2px solid var(--primary)' }} />
                             </div>
 
                             <button
