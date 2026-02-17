@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import { Users, UserSquare2, Clock, CheckCircle2, CalendarOff, HardDrive, AlertCircle, XCircle } from 'lucide-react';
 
@@ -20,34 +21,34 @@ export default function Dashboard() {
             <h2 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>Dashboard</h2>
 
             <div className="stats-grid">
-                <div className="stat-card">
+                <Link to="/employees" className="stat-card">
                     <div className="stat-icon blue"><Users size={24} /></div>
                     <div className="stat-info"><h3>{s.totalEmployees}</h3><p>Total Employees</p></div>
-                </div>
-                <div className="stat-card">
+                </Link>
+                <Link to="/students" className="stat-card">
                     <div className="stat-icon purple"><UserSquare2 size={24} /></div>
                     <div className="stat-info"><h3>{s.totalStudents}</h3><p>Total Students</p></div>
-                </div>
-                <div className="stat-card">
+                </Link>
+                <Link to="/attendance" className="stat-card">
                     <div className="stat-icon green"><Clock size={24} /></div>
                     <div className="stat-info"><h3>{s.todayPresent}</h3><p>Present Today</p></div>
-                </div>
-                <div className="stat-card">
+                </Link>
+                <Link to="/reports" className="stat-card">
                     <div className="stat-icon red"><XCircle size={24} /></div>
                     <div className="stat-info"><h3>{s.todayAbsent}</h3><p>Absent Today</p></div>
-                </div>
-                <div className="stat-card">
+                </Link>
+                <Link to="/approvals" className="stat-card">
                     <div className="stat-icon yellow"><CheckCircle2 size={24} /></div>
                     <div className="stat-info"><h3>{s.pendingApprovals}</h3><p>Pending Approvals</p></div>
-                </div>
-                <div className="stat-card">
+                </Link>
+                <Link to="/leave-requests" className="stat-card">
                     <div className="stat-icon indigo"><CalendarOff size={24} /></div>
                     <div className="stat-info"><h3>{s.pendingLeaves}</h3><p>Pending Leaves</p></div>
-                </div>
-                <div className="stat-card">
+                </Link>
+                <Link to="/devices" className="stat-card">
                     <div className="stat-icon green"><HardDrive size={24} /></div>
                     <div className="stat-info"><h3>{s.activeDevices}</h3><p>Active Devices</p></div>
-                </div>
+                </Link>
             </div>
 
             {stats.recentAnnouncements?.length > 0 && (
