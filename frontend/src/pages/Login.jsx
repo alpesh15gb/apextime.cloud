@@ -6,6 +6,7 @@ import { Eye, EyeOff } from 'lucide-react';
 export default function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [slug, setSlug] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -17,7 +18,7 @@ export default function Login() {
         setError('');
         setLoading(true);
         try {
-            const user = await login(username, password);
+            const user = await login(username, password, slug);
             if (user.role === 'employee' || user.role === 'teacher') {
                 navigate('/portal');
             } else {
@@ -45,6 +46,17 @@ export default function Login() {
                             {error}
                         </div>
                     )}
+
+                    <div className="form-group">
+                        <label className="form-label">Organization ID (Optional if using specific domain)</label>
+                        <input
+                            className="form-input"
+                            type="text"
+                            placeholder="e.g. school-name"
+                            value={slug}
+                            onChange={(e) => setSlug(e.target.value.toLowerCase().trim())}
+                        />
+                    </div>
 
                     <div className="form-group">
                         <label className="form-label">User ID / Employee Code</label>

@@ -7,15 +7,29 @@ const { JWT_SECRET } = require('../middleware/auth');
 // POST /api/auth/login
 router.post('/login', async (req, res, next) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, slug } = req.body;
 
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password are required' });
         }
 
         const whereClause = { username };
-        if (req.tenantId) {
-            whereClause.tenantId = req.tenantId;
+
+        // Resolve tenant from slug if provided
+        let tenantId = req.tenantId;
+        if (slug) {
+            const tenant = await prisma.tenant.findUnique({ where: { slug } });
+            if (!tenant) {
+                return res.status(404).json({ error: 'Organization ID not found' });
+            }
+            if (tenant.status !== 'active') {
+                return res.status(403).json({ error: 'Organization is inactive' });
+            }
+            tenantId = tenant.id;
+        }
+
+        if (tenantId) {
+            whereClause.tenantId = tenantId;
         }
 
         const user = await prisma.user.findFirst({
