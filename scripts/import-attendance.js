@@ -52,8 +52,10 @@ async function main() {
         const line = lines[i];
         if (i === 0) console.log(`DEBUG: First line content: "${line}"`);
 
-        // Parse CSV Line
-        const cols = line.split(',');
+        // Parse CSV Line (Detect Tab or Comma)
+        let cols = line.split('\t');
+        if (cols.length < 5) cols = line.split(',');
+
         if (i === 0) console.log(`DEBUG: Columns found: ${cols.length}`);
 
         if (cols.length < 10) {
