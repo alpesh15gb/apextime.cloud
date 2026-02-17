@@ -162,24 +162,38 @@ router.put('/:uuid', requireRole('admin', 'super_admin'), async (req, res, next)
 
         const result = await prisma.$transaction(async (tx) => {
             // Update contact
+            // Update contact
+            const contactData = {};
+            if (firstName) contactData.firstName = firstName;
+            if (lastName) contactData.lastName = lastName;
+            if (email !== undefined) contactData.email = email;
+            if (phone !== undefined) contactData.phone = phone;
+            if (gender) contactData.gender = gender;
+            if (dateOfBirth) contactData.dateOfBirth = new Date(dateOfBirth);
+            if (address !== undefined) contactData.address = address;
+            if (city !== undefined) contactData.city = city;
+            if (state !== undefined) contactData.state = state;
+            if (pincode !== undefined) contactData.pincode = pincode;
+            if (bloodGroup !== undefined) contactData.bloodGroup = bloodGroup;
+
             await tx.contact.update({
                 where: { id: employee.contactId },
-                data: {
-                    firstName, lastName, email, phone, gender,
-                    dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-                    address, city, state, pincode, bloodGroup,
-                },
+                data: contactData,
             });
 
             // Update employee
+            const employeeData = {};
+            if (employeeCode) employeeData.employeeCode = employeeCode;
+            if (departmentId !== undefined) employeeData.departmentId = departmentId;
+            if (designationId !== undefined) employeeData.designationId = designationId;
+            if (joiningDate) employeeData.joiningDate = new Date(joiningDate);
+            if (leavingDate !== undefined) employeeData.leavingDate = leavingDate ? new Date(leavingDate) : null;
+            if (type) employeeData.type = type;
+            if (status) employeeData.status = status;
+
             return tx.employee.update({
                 where: { id: employee.id },
-                data: {
-                    employeeCode, departmentId, designationId,
-                    joiningDate: joiningDate ? new Date(joiningDate) : undefined,
-                    leavingDate: leavingDate ? new Date(leavingDate) : undefined,
-                    type, status,
-                },
+                data: employeeData,
                 include: { contact: true, department: true, designation: true },
             });
         });
