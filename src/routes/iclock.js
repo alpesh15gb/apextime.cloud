@@ -107,6 +107,17 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
                     // Log the raw data
                     const punchTime = dayjs(dateTimeStr, 'YYYY-MM-DD HH:mm:ss').toDate();
 
+                    // Check for existing log to prevent duplicates
+                    const existingLog = await prisma.deviceLog.findFirst({
+                        where: {
+                            deviceId: device.id,
+                            userId,
+                            punchTime,
+                        },
+                    });
+
+                    if (existingLog) continue;
+
                     await prisma.deviceLog.create({
                         data: {
                             tenantId: device.tenantId,
@@ -146,18 +157,28 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
                                 });
                             }
                         } else {
-                            // Clock in
-                            await prisma.timesheet.create({
-                                data: {
-                                    tenantId: device.tenantId,
+                            // Check if timesheet already exists for this punch (prevent duplicates)
+                            const duplicateSheet = await prisma.timesheet.findFirst({
+                                where: {
                                     employeeId: employee.id,
-                                    date: new Date(dateStr),
                                     inAt: punchTime,
-                                    source: 'device',
-                                    status: 'auto_approved',
-                                    meta: { device_sn: SN, verify_mode: verifyMode, in_out_mode: inOutMode },
                                 },
                             });
+
+                            if (!duplicateSheet) {
+                                // Clock in
+                                await prisma.timesheet.create({
+                                    data: {
+                                        tenantId: device.tenantId,
+                                        employeeId: employee.id,
+                                        date: new Date(dateStr),
+                                        inAt: punchTime,
+                                        source: 'device',
+                                        status: 'auto_approved',
+                                        meta: { device_sn: SN, verify_mode: verifyMode, in_out_mode: inOutMode },
+                                    },
+                                });
+                            }
                         }
 
                         // Mark log as processed
