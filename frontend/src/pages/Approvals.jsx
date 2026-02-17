@@ -3,6 +3,21 @@ import api from '../lib/api';
 import dayjs from 'dayjs';
 import { CheckCircle2, XCircle, MapPin, Camera } from 'lucide-react';
 
+const LocationAddress = ({ lat, lng }) => {
+    const [addr, setAddr] = useState('Locating...');
+    useEffect(() => {
+        if (!lat || !lng) return;
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+            .then(res => res.json())
+            .then(d => {
+                const parts = (d.display_name || '').split(',');
+                setAddr(parts.slice(0, 2).join(', '));
+            })
+            .catch(() => setAddr('Unknown Location'));
+    }, [lat, lng]);
+    return <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', marginTop: 4 }}><MapPin size={10} style={{ marginRight: 4 }} /> {addr}</div>;
+};
+
 export default function Approvals() {
     const [pending, setPending] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -66,18 +81,14 @@ export default function Approvals() {
                                 {/* IN Evidence */}
                                 <div>
                                     <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>PUNCH IN</div>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                         {t.photoUrl ? (
-                                            <a href={t.photoUrl} target="_blank" rel="noopener noreferrer">
-                                                <img src={t.photoUrl} alt="In Selfie" className="approval-photo" style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }} />
+                                            <a href={t.photoUrl.startsWith('/') ? `/api${t.photoUrl}` : t.photoUrl} target="_blank" rel="noopener noreferrer">
+                                                <img src={t.photoUrl.startsWith('/') ? `/api${t.photoUrl}` : t.photoUrl} alt="In Selfie" className="approval-photo" style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--border)' }} />
                                             </a>
                                         ) : <span style={{ fontSize: '11px', color: 'var(--danger)' }}>No Photo</span>}
 
-                                        {t.latitude ? (
-                                            <a href={`https://maps.google.com/?q=${t.latitude},${t.longitude}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <MapPin size={12} /> Map
-                                            </a>
-                                        ) : <span style={{ fontSize: '11px', color: 'var(--danger)' }}>No GPS</span>}
+                                        {t.latitude && <LocationAddress lat={t.latitude} lng={t.longitude} />}
                                     </div>
                                 </div>
 
@@ -85,18 +96,14 @@ export default function Approvals() {
                                 {t.outAt && (
                                     <div>
                                         <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>PUNCH OUT</div>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                             {t.outPhotoUrl ? (
-                                                <a href={t.outPhotoUrl} target="_blank" rel="noopener noreferrer">
-                                                    <img src={t.outPhotoUrl} alt="Out Selfie" className="approval-photo" style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }} />
+                                                <a href={t.outPhotoUrl.startsWith('/') ? `/api${t.outPhotoUrl}` : t.outPhotoUrl} target="_blank" rel="noopener noreferrer">
+                                                    <img src={t.outPhotoUrl.startsWith('/') ? `/api${t.outPhotoUrl}` : t.outPhotoUrl} alt="Out Selfie" className="approval-photo" style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--border)' }} />
                                                 </a>
                                             ) : <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>-</span>}
 
-                                            {t.outLatitude && (
-                                                <a href={`https://maps.google.com/?q=${t.outLatitude},${t.outLongitude}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <MapPin size={12} /> Map
-                                                </a>
-                                            )}
+                                            {t.outLatitude && <LocationAddress lat={t.outLatitude} lng={t.outLongitude} />}
                                         </div>
                                     </div>
                                 )}
