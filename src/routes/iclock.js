@@ -90,6 +90,10 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
 
         const rawBody = (typeof req.body === 'string' ? req.body : JSON.stringify(req.body)) || '';
 
+        // Debug logging
+        console.log(`[iClock] Received POST from ${SN}. Content-Type: ${req.headers['content-type']}. Body length: ${rawBody.length}`);
+        if (rawBody.length > 0) console.log(`[iClock] Body preview: ${rawBody.substring(0, 100)}`);
+
         if (table === 'ATTLOG' || !table) {
             // Parse attendance log lines
             // Format: userId\tdateTime\tverifyMode\tinOutMode\tworkCode
