@@ -83,6 +83,7 @@ app.use('/api/leave', tenantMiddleware, authMiddleware, leaveRoutes);
 app.use('/api/announcements', tenantMiddleware, authMiddleware, announcementRoutes);
 app.use('/api/devices', tenantMiddleware, authMiddleware, deviceRoutes);
 app.use('/api/portal', tenantMiddleware, authMiddleware, portalRoutes);
+app.use('/api/reports', tenantMiddleware, authMiddleware, require('./routes/reports'));
 
 // Serve React frontend in production
 if (process.env.NODE_ENV === 'production') {

@@ -14,6 +14,7 @@ import Students from './pages/Students';
 import Announcements from './pages/Announcements';
 import Devices from './pages/Devices';
 import Tenants from './pages/Tenants';
+import Reports from './pages/Reports';
 import './index.css';
 
 function ProtectedRoute({ children, adminOnly }) {
@@ -42,8 +43,8 @@ function AppRoutes() {
         <Route path="academic" element={<AcademicStructure />} />
         <Route path="students" element={<Students />} />
         <Route path="announcements" element={<Announcements />} />
-        <Route path="announcements" element={<Announcements />} />
         <Route path="devices" element={<Devices />} />
+        <Route path="reports" element={<Reports />} />
         <Route path="tenants" element={<Tenants />} />
       </Route>
 
