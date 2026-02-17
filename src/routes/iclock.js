@@ -163,11 +163,25 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
                                     contactId: newContact.id,
                                     employeeCode: userId,
                                     joiningDate: new Date(),
-                                    type: 'full_time', // default
+                                    type: 'full_time',
                                     status: 'active',
                                 },
                             });
-                            console.log(`[iClock] Auto-created employee ${userId} from device ${SN}`);
+
+                            // Auto-create User account
+                            const bcrypt = require('bcryptjs');
+                            const passwordHash = await bcrypt.hash(userId, 10);
+                            await prisma.user.create({
+                                data: {
+                                    tenantId: device.tenantId,
+                                    username: userId,
+                                    passwordHash,
+                                    role: 'employee',
+                                    employeeId: employee.id,
+                                },
+                            });
+
+                            console.log(`[iClock] Auto-created employee & user ${userId} from device ${SN}`);
                         } catch (err) {
                             console.error(`[iClock] Failed to auto-create employee ${userId}:`, err);
                         }

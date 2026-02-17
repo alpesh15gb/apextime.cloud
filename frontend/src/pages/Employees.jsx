@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Key } from 'lucide-react';
 
 export default function Employees() {
     const [employees, setEmployees] = useState([]);
@@ -57,13 +57,26 @@ export default function Employees() {
         try { await api.delete(`/employees/${uuid}`); loadData(); } catch (err) { alert('Failed to delete'); }
     };
 
+    const generateUsers = async () => {
+        if (!confirm('This will create portal accounts for all employees who do not have one. The username and password will be their Employee Code. Continue?')) return;
+        try {
+            const res = await api.post('/employees/generate-users');
+            alert(res.data.message);
+        } catch (err) { alert('Failed to generate users'); }
+    };
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '22px', fontWeight: 700 }}>Employees</h2>
-                <button className="btn btn-primary" onClick={() => { setEditItem(null); setForm({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '' }); setShowModal(true); }}>
-                    <Plus size={16} /> Add Employee
-                </button>
+                <div>
+                    <button className="btn btn-ghost btn-sm" onClick={generateUsers} title="Create portal accounts for employees" style={{ marginRight: '8px', border: '1px solid var(--border)' }}>
+                        <Key size={16} style={{ marginRight: '6px' }} /> Enable Portal Access
+                    </button>
+                    <button className="btn btn-primary" onClick={() => { setEditItem(null); setForm({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '' }); setShowModal(true); }}>
+                        <Plus size={16} /> Add Employee
+                    </button>
+                </div>
             </div>
 
             <div style={{ marginBottom: '16px' }}>

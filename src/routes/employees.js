@@ -206,4 +206,33 @@ router.delete('/:uuid', requireRole('admin', 'super_admin'), async (req, res, ne
     } catch (error) { next(error); }
 });
 
+// POST /api/employees/generate-users - Generate user accounts for employees who don't have one
+router.post('/generate-users', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const employees = await prisma.employee.findMany({
+            where: { tenantId: req.tenantId },
+            include: { users: true },
+        });
+
+        let created = 0;
+        for (const emp of employees) {
+            if (emp.users.length === 0 && emp.employeeCode) {
+                const passwordHash = await bcrypt.hash(emp.employeeCode, 10);
+                await prisma.user.create({
+                    data: {
+                        tenantId: req.tenantId,
+                        username: emp.employeeCode,
+                        passwordHash,
+                        role: 'employee',
+                        employeeId: emp.id,
+                    },
+                });
+                created++;
+            }
+        }
+
+        res.json({ message: `Generated ${created} user accounts`, created });
+    } catch (error) { next(error); }
+});
+
 module.exports = router;
