@@ -7,7 +7,8 @@ const prisma = require('../lib/prisma');
 const dayjs = require('dayjs');
 
 // GET /iclock/cdata — Device registration & config pull
-router.get('/cdata', async (req, res, next) => {
+// GET /iclock/cdata — Device registration & config pull
+router.get(['/cdata', '/cdata.aspx'], async (req, res, next) => {
     try {
         const { SN, options, pushver, language } = req.query;
 
@@ -59,7 +60,8 @@ router.get('/cdata', async (req, res, next) => {
 });
 
 // POST /iclock/cdata — Receive attendance/operation logs
-router.post('/cdata', async (req, res, next) => {
+// POST /iclock/cdata — Receive attendance/operation logs
+router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
     try {
         const { SN, table } = req.query;
 
@@ -188,7 +190,8 @@ router.post('/cdata', async (req, res, next) => {
 });
 
 // GET /iclock/getrequest — Device polls for pending commands
-router.get('/getrequest', async (req, res, next) => {
+// GET /iclock/getrequest — Device polls for pending commands
+router.get(['/getrequest', '/getrequest.aspx'], async (req, res, next) => {
     try {
         const { SN } = req.query;
         if (!SN) return res.send('OK');
@@ -201,7 +204,8 @@ router.get('/getrequest', async (req, res, next) => {
 });
 
 // POST /iclock/devicecmd — Device command response
-router.post('/devicecmd', async (req, res, next) => {
+// POST /iclock/devicecmd — Device command response
+router.post(['/devicecmd', '/devicecmd.aspx'], async (req, res, next) => {
     try {
         res.send('OK');
     } catch (error) {
