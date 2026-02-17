@@ -21,7 +21,9 @@ async function tenantMiddleware(req, res, next) {
                 const parts = host.split('.');
                 // subdomain.apextime.cloud = 3 parts
                 // subdomain.localhost = 2 parts (dev)
-                if (parts.length >= 2) {
+                // Check if host is IP address
+                const isIp = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(host);
+                if (!isIp && parts.length >= 2) {
                     const sub = parts[0];
                     if (sub !== 'www' && sub !== 'api' && sub !== 'admin') {
                         slug = sub;
