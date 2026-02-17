@@ -108,7 +108,7 @@ export default function Reports() {
             </div>
 
             {data && (
-                <div className="report-container printable">
+                <div className="report-container printable" style={{ background: 'white', color: 'black', padding: '20px' }}>
                     <div style={{ textAlign: 'center', marginBottom: 10 }} className="print-header">
                         <h3>Monthly Performance Report</h3>
                         <p style={{ marginBottom: 0 }}>From: {year}-{month.toString().padStart(2, '0')}-01 To: {year}-{month.toString().padStart(2, '0')}-{data.meta.daysInMonth}</p>
