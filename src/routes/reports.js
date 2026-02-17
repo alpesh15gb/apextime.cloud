@@ -138,4 +138,56 @@ router.get('/monthly', async (req, res, next) => {
     } catch (error) { next(error); }
 });
 
+// GET /api/reports/approvals
+router.get('/approvals', async (req, res, next) => {
+    try {
+        const { startDate, endDate, status } = req.query;
+
+        const start = startDate ? new Date(startDate) : dayjs().startOf('month').toDate();
+        const end = endDate ? new Date(endDate) : dayjs().endOf('month').toDate();
+
+        const where = {
+            tenantId: req.tenantId,
+            date: { gte: start, lte: end },
+            // If status is provided, use it. Otherwise default to approved/rejected.
+            status: status ? status : { in: ['approved', 'rejected', 'pending'] }
+        };
+
+        const records = await prisma.timesheet.findMany({
+            where,
+            include: {
+                employee: {
+                    include: {
+                        contact: true,
+                        department: true
+                    }
+                },
+                reviewer: {
+                    select: { username: true, role: true }
+                }
+            },
+            orderBy: { date: 'desc' }
+        });
+
+        const formatted = records.map(r => ({
+            id: r.id,
+            date: dayjs(r.date).format('YYYY-MM-DD'),
+            employeeName: `${r.employee.contact.firstName} ${r.employee.contact.lastName || ''}`.trim(),
+            employeeCode: r.employee.employeeCode,
+            department: r.employee.department?.name || '-',
+            inTime: r.inAt ? dayjs(r.inAt).format('HH:mm') : '-',
+            outTime: r.outAt ? dayjs(r.outAt).format('HH:mm') : '-',
+            status: r.status,
+            reviewedBy: r.reviewer?.username || (r.status === 'auto_approved' ? 'System' : '-'),
+            reviewedAt: r.reviewedAt ? dayjs(r.reviewedAt).format('YYYY-MM-DD HH:mm') : '-',
+            remarks: r.remarks || '-',
+            photoUrl: r.meta?.photo_url || null,
+            location: r.meta?.latitude ? `${r.meta.latitude}, ${r.meta.longitude}` : '-'
+        }));
+
+        res.json(formatted);
+
+    } catch (error) { next(error); }
+});
+
 module.exports = router;
