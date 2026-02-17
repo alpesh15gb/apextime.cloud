@@ -27,18 +27,41 @@ export default function Tenants() {
         catch (err) { alert(err.response?.data?.error || 'Failed to create tenant'); }
     };
 
+    const [showUsersModal, setShowUsersModal] = useState(false);
+    const [selectedTenant, setSelectedTenant] = useState(null);
+    const [tenantUsers, setTenantUsers] = useState([]);
+    const [resetPassword, setResetPassword] = useState('');
+
+    const loadUsers = async (tenant) => {
+        setSelectedTenant(tenant);
+        try {
+            const res = await api.get(`/tenants/${tenant.uuid}/users`);
+            setTenantUsers(res.data);
+            setShowUsersModal(true);
+        } catch (err) { alert('Failed to load users'); }
+    };
+
+    const handlePasswordReset = async (username) => {
+        const newPass = prompt(`Enter new password for ${username}:`);
+        if (!newPass) return;
+        try {
+            await api.post(`/tenants/${selectedTenant.uuid}/reset-password`, { username, newPassword: newPass });
+            alert('Password updated successfully');
+        } catch (err) { alert(err.response?.data?.error || 'Failed to reset password'); }
+    };
+
     if (user?.role !== 'super_admin') return <div style={{ padding: '40px', textAlign: 'center' }}>Access Denied</div>;
 
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '22px', fontWeight: 700 }}>Organizations</h2>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={16} /> New Organization</button>
+                <button className="btn btn-primary" onClick={() => { setForm({ name: '', slug: '', domain: '', adminUsername: 'admin', adminPassword: '' }); setShowModal(true); }}><Plus size={16} /> New Organization</button>
             </div>
 
             <div className="card">
                 <table className="data-table">
-                    <thead><tr><th>Name</th><th>Slug / ID</th><th>Domain</th><th>Status</th><th>Stats</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Slug / ID</th><th>Domain</th><th>Status</th><th>Stats</th><th>Actions</th></tr></thead>
                     <tbody>
                         {tenants.map(t => (
                             <tr key={t.id}>
@@ -49,13 +72,17 @@ export default function Tenants() {
                                 <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                                     {t._count?.users || 0} users, {t._count?.employees || 0} employees
                                 </td>
+                                <td>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => loadUsers(t)}><Users size={14} /> Users</button>
+                                </td>
                             </tr>
                         ))}
-                        {tenants.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No organizations found</td></tr>}
+                        {tenants.length === 0 && <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No organizations found</td></tr>}
                     </tbody>
                 </table>
             </div>
 
+            {/* Create Tenant Modal */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
@@ -80,6 +107,39 @@ export default function Tenants() {
                                 <button type="submit" className="btn btn-primary">Create Organization</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Manage Users Modal */}
+            {showUsersModal && selectedTenant && (
+                <div className="modal-overlay" onClick={() => setShowUsersModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+                        <div className="modal-header">
+                            <h3 className="modal-title">Users in {selectedTenant.name}</h3>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setShowUsersModal(false)}>✕</button>
+                        </div>
+                        <div className="modal-body">
+                            <table className="data-table" style={{ marginTop: 0 }}>
+                                <thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody>
+                                    {tenantUsers.map(u => (
+                                        <tr key={u.id}>
+                                            <td><strong>{u.username}</strong></td>
+                                            <td><span className="badge">{u.role}</span></td>
+                                            <td><span className={`badge badge-${u.status === 'active' ? 'success' : 'warning'}`}>{u.status}</span></td>
+                                            <td>
+                                                <button className="btn btn-danger btn-sm" onClick={() => handlePasswordReset(u.username)} style={{ fontSize: '11px', padding: '4px 8px' }}>Reset Pass</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {tenantUsers.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No users found</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => setShowUsersModal(false)}>Close</button>
+                        </div>
                     </div>
                 </div>
             )}

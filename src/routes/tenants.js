@@ -81,4 +81,42 @@ router.put('/:uuid', requireRole('super_admin'), async (req, res, next) => {
     } catch (error) { next(error); }
 });
 
+// GET /api/tenants/:uuid/users - List users for a tenant
+router.get('/:uuid/users', requireRole('super_admin'), async (req, res, next) => {
+    try {
+        const tenant = await prisma.tenant.findUnique({ where: { uuid: req.params.uuid } });
+        if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+
+        const users = await prisma.user.findMany({
+            where: { tenantId: tenant.id },
+            select: { id: true, username: true, role: true, status: true, lastLoginAt: true },
+        });
+        res.json(users);
+    } catch (error) { next(error); }
+});
+
+// POST /api/tenants/:uuid/reset-password - Reset password for a user in tenant
+router.post('/:uuid/reset-password', requireRole('super_admin'), async (req, res, next) => {
+    try {
+        const { username, newPassword } = req.body;
+        const tenant = await prisma.tenant.findUnique({ where: { uuid: req.params.uuid } });
+
+        if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+
+        const user = await prisma.user.findFirst({
+            where: { tenantId: tenant.id, username },
+        });
+
+        if (!user) return res.status(404).json({ error: 'User not found in this organization' });
+
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { passwordHash },
+        });
+
+        res.json({ message: `Password for ${username} reset successfully` });
+    } catch (error) { next(error); }
+});
+
 module.exports = router;
