@@ -4,6 +4,51 @@ import dayjs from 'dayjs';
 import { Download, Printer, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
+const LocationCell = ({ location }) => {
+    const [address, setAddress] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    if (!location || location === '-') return <span>-</span>;
+
+    // Check if location is just lat,lng
+    if (!location.includes(',')) return <span>{location}</span>;
+
+    const [lat, lng] = location.split(',').map(s => s.trim());
+
+    const fetchAddress = async () => {
+        setLoading(true);
+        try {
+            // Use fetch directly to avoid axios interceptors or base URL issues
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+            const data = await res.json();
+            // Get a shorter address if possible (e.g. road, city)
+            const addr = data.address;
+            const shortAddr = [addr.road, addr.suburb, addr.city, addr.state].filter(Boolean).join(', ');
+            setAddress(shortAddr || data.display_name);
+        } catch (err) {
+            setAddress('Addr Error');
+        }
+        setLoading(false);
+    };
+
+    return (
+        <div style={{ fontSize: 10 }}>
+            {address ? (
+                <a href={`https://www.google.com/maps?q=${lat},${lng}`} target="_blank" rel="noreferrer" title={address} style={{ textDecoration: 'underline', color: 'blue' }}>
+                    {address.length > 30 ? address.substring(0, 30) + '...' : address}
+                </a>
+            ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>{Number(lat).toFixed(4)}, {Number(lng).toFixed(4)}</span>
+                    <button onClick={fetchAddress} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }} title="Get Address">📍</button>
+                    <a href={`https://www.google.com/maps?q=${lat},${lng}`} target="_blank" rel="noreferrer" title="Open Map">🗺️</a>
+                    {loading && <span>...</span>}
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function Reports() {
     const [activeTab, setActiveTab] = useState('monthly'); // monthly | approvals
 
@@ -246,7 +291,7 @@ export default function Reports() {
                                     <td style={{ padding: 6, border: '1px solid #ccc' }}>{row.inTime}</td>
                                     <td style={{ padding: 6, border: '1px solid #ccc' }}>{row.outTime}</td>
                                     <td style={{ padding: 6, border: '1px solid #ccc', fontSize: 9 }}>
-                                        {row.location}
+                                        <LocationCell location={row.location} />
                                         {row.photoUrl && <div style={{ fontSize: 9, color: 'blue' }}>[Has Photo]</div>}
                                     </td>
                                     <td style={{ padding: 6, border: '1px solid #ccc' }}>
