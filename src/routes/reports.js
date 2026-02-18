@@ -169,21 +169,26 @@ router.get('/approvals', async (req, res, next) => {
             orderBy: { date: 'desc' }
         });
 
-        const formatted = records.map(r => ({
-            id: r.id,
-            date: dayjs(r.date).format('YYYY-MM-DD'),
-            employeeName: `${r.employee.contact.firstName} ${r.employee.contact.lastName || ''}`.trim(),
-            employeeCode: r.employee.employeeCode,
-            department: r.employee.department?.name || '-',
-            inTime: r.inAt ? dayjs(r.inAt).format('HH:mm') : '-',
-            outTime: r.outAt ? dayjs(r.outAt).format('HH:mm') : '-',
-            status: r.status,
-            reviewedBy: r.reviewer?.username || (r.status === 'auto_approved' ? 'System' : '-'),
-            reviewedAt: r.reviewedAt ? dayjs(r.reviewedAt).format('YYYY-MM-DD HH:mm') : '-',
-            remarks: r.remarks || '-',
-            photoUrl: r.meta?.photo_url || null,
-            location: r.meta?.latitude ? `${r.meta.latitude}, ${r.meta.longitude}` : '-'
-        }));
+        const formatted = records.map(r => {
+            const lat = r.meta?.in?.latitude || r.meta?.latitude;
+            const lng = r.meta?.in?.longitude || r.meta?.longitude;
+
+            return {
+                id: r.id,
+                date: dayjs(r.date).format('YYYY-MM-DD'),
+                employeeName: `${r.employee.contact.firstName} ${r.employee.contact.lastName || ''}`.trim(),
+                employeeCode: r.employee.employeeCode,
+                department: r.employee.department?.name || '-',
+                inTime: r.inAt ? dayjs(r.inAt).format('HH:mm') : '-',
+                outTime: r.outAt ? dayjs(r.outAt).format('HH:mm') : '-',
+                status: r.status,
+                reviewedBy: r.reviewer?.username || (r.status === 'auto_approved' ? 'System' : '-'),
+                reviewedAt: r.reviewedAt ? dayjs(r.reviewedAt).format('YYYY-MM-DD HH:mm') : '-',
+                remarks: r.remarks || '-',
+                photoUrl: r.meta?.in?.photo_url || r.meta?.photo_url || null,
+                location: lat ? `${lat}, ${lng}` : '-'
+            };
+        });
 
         res.json(formatted);
 
