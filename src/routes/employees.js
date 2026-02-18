@@ -109,14 +109,21 @@ router.post('/', requireRole('admin', 'super_admin'), async (req, res, next) => 
                 },
             });
 
+            // Helper to parse IDs
+            const parseId = (val) => {
+                if (val === null || val === undefined || val === '') return null;
+                const parsed = parseInt(val);
+                return isNaN(parsed) ? null : parsed;
+            };
+
             // Create employee
             const employee = await tx.employee.create({
                 data: {
                     tenantId: req.tenantId,
                     contactId: contact.id,
                     employeeCode,
-                    departmentId: departmentId || null,
-                    designationId: designationId || null,
+                    departmentId: parseId(departmentId),
+                    designationId: parseId(designationId),
                     joiningDate: new Date(joiningDate || Date.now()),
                     type: type || 'full_time',
                 },
@@ -181,11 +188,18 @@ router.put('/:uuid', requireRole('admin', 'super_admin'), async (req, res, next)
                 data: contactData,
             });
 
+            // Helper to safely parse IDs
+            const parseId = (val) => {
+                if (val === null || val === undefined || val === '') return null;
+                const parsed = parseInt(val);
+                return isNaN(parsed) ? null : parsed;
+            };
+
             // Update employee
             const employeeData = {};
             if (employeeCode) employeeData.employeeCode = employeeCode;
-            if (departmentId !== undefined) employeeData.departmentId = departmentId ? parseInt(departmentId) : null;
-            if (designationId !== undefined) employeeData.designationId = designationId ? parseInt(designationId) : null;
+            if (departmentId !== undefined) employeeData.departmentId = parseId(departmentId);
+            if (designationId !== undefined) employeeData.designationId = parseId(designationId);
             if (joiningDate) employeeData.joiningDate = new Date(joiningDate);
             if (leavingDate !== undefined) employeeData.leavingDate = leavingDate ? new Date(leavingDate) : null;
             if (type) employeeData.type = type;
