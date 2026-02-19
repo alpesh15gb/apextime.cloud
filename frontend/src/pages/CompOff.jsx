@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import dayjs from 'dayjs';
-import { Plus, X, Check, XCircle, Lock, Download, ChevronLeft, ChevronRight, Search, Clock, CalendarDays, Stethoscope, Palmtree, AlertTriangle, Settings, Zap } from 'lucide-react';
+import { Plus, X, Check, XCircle, Lock, Download, ChevronLeft, ChevronRight, Search, Clock, CalendarDays, Stethoscope, Palmtree, AlertTriangle, Settings, Zap, Printer } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -83,18 +83,76 @@ export default function CompOff() {
 
     const exportSummaryExcel = () => {
         if (!summaryData?.data) return;
-        const rows = summaryData.data.map(e => ({
-            'Sl.': e.slNo, 'Name': e.name, 'Designation': e.designation, 'Category': CAT_LABELS[e.category] || e.category,
-            'Days Present': e.daysPresent,
-            'CO Days': e.current?.compOffDays || 0, 'CO Hrs': e.current?.compOffHours || 0,
-            'CL Availed': e.current?.clAvailed || 0, 'Late Check-In': e.current?.lateCheckIns || 0, 'Late→Days': e.current?.lateCheckInDays || 0,
-            'Perm Days': e.current?.permDays || 0, 'Perm Hrs': e.current?.permHours || 0,
-            'SL Availed': e.current?.slAvailed || 0, 'EL Credited': e.current?.elCredited || 0, 'EL Utilised': e.current?.elUtilised || 0,
-            'Avail CO': e.available?.compOffDays || 0, 'Avail CL': e.available?.cl || 0, 'Avail SL': e.available?.sl || 0, 'Avail EL': e.available?.el || 0,
-            'Bal CO': e.balance?.compOffDays || 0, 'Bal CL': e.balance?.cl || 0, 'Bal SL': e.balance?.sl || 0, 'Bal EL': e.balance?.el || 0,
-            'LOP': e.lopDays || 0, 'Status': e.status,
-        }));
-        const ws = XLSX.utils.json_to_sheet(rows);
+        const ws = XLSX.utils.aoa_to_sheet([
+            [
+                'Sl. No', 'Name / Employee Code', 'Designation', 'Category', 'Days Present',
+                'Current Month', null, null, null, null, null,
+                'Available / Accumulated', null, null, null, null,
+                'Balance C/F', null, null, null, null,
+                'LOP/Status', null
+            ],
+            [
+                null, null, null, null, null,
+                // Current
+                'Comp-Off', 'CL', 'Late', 'Perm', 'SL', 'EL',
+                // Available
+                'Comp-Off', 'CL', 'SL', 'EL', 'Perm',
+                // Balance
+                'Comp-Off', 'CL', 'SL', 'EL', 'Perm',
+                // Status
+                'LOP Days', 'Status'
+            ],
+            ...summaryData.data.map((e, i) => [
+                i + 1,
+                `${e.name}\n${e.code}`,
+                e.designation,
+                CAT_LABELS[e.category] || e.category,
+                e.daysPresent,
+                // Current
+                e.current?.compOffDays || '-',
+                e.current?.clAvailed || '-',
+                e.current?.lateCheckIns ? `${e.current.lateCheckIns}→${e.current.lateCheckInDays}d` : '-',
+                e.current?.permDays || '-',
+                e.current?.slAvailed || '-',
+                e.current?.elUtilised || '-',
+                // Available
+                e.available?.compOffDays || '-',
+                e.available?.cl || '-',
+                e.available?.sl || '-',
+                e.available?.el || '-',
+                e.available?.permDays || '-',
+                // Balance
+                e.balance?.compOffDays ?? 0,
+                e.balance?.cl ?? 0,
+                e.balance?.sl ?? 0,
+                e.balance?.el ?? 0,
+                e.balance?.permHours ?? 0,
+                // Status
+                e.lopDays || 0,
+                e.status
+            ])
+        ]);
+
+        ws['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
+            { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
+            { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
+            { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } },
+            { s: { r: 0, c: 4 }, e: { r: 1, c: 4 } },
+            { s: { r: 0, c: 5 }, e: { r: 0, c: 10 } }, // Current
+            { s: { r: 0, c: 11 }, e: { r: 0, c: 15 } }, // Available
+            { s: { r: 0, c: 16 }, e: { r: 0, c: 20 } }, // Balance
+            { s: { r: 0, c: 21 }, e: { r: 0, c: 22 } }, // LOP Status
+        ];
+
+        ws['!cols'] = [
+            { wch: 6 }, { wch: 25 }, { wch: 18 }, { wch: 12 }, { wch: 12 },
+            { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
+            { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
+            { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
+            { wch: 10 }, { wch: 10 }
+        ];
+
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Summary');
         XLSX.writeFile(wb, `CompOff_Summary_${MONTHS[month - 1]}_${year}.xlsx`);
@@ -112,12 +170,12 @@ export default function CompOff() {
     return (
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
             {/* ───── HEADER ───── */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="print-hide" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h2 style={{ fontSize: 22, fontWeight: 700 }}>Comp-Off & Leave Management</h2>
             </div>
 
             {/* ───── CONTROLS BAR ───── */}
-            <div style={{
+            <div className="print-hide" style={{
                 display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap',
                 padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--border)',
@@ -156,6 +214,7 @@ export default function CompOff() {
                 </div>
                 {activeTab === 'summary' && (
                     <>
+                        <button className="btn btn-ghost btn-sm" onClick={() => window.print()}><Printer size={14} /> Print</button>
                         <button className="btn btn-ghost btn-sm" onClick={exportSummaryExcel}><Download size={14} /> Excel</button>
                         <button className="btn btn-primary btn-sm" onClick={handleCloseMonth}><Lock size={14} /> Close Month</button>
                     </>
@@ -620,6 +679,21 @@ export default function CompOff() {
                     </div>
                 </div>
             )}
+
+            {/* ───── PRINT STYLES ───── */}
+            <style>{`
+                @media print {
+                    body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
+                    .sidebar, .navbar, .print-hide { display: none !important; }
+                    .main-content { margin: 0 !important; padding: 0 !important; }
+                    .data-table { width: 100% !important; font-size: 8pt !important; border: 1px solid #000 !important; }
+                    .data-table th, .data-table td { color: black !important; border-color: #000 !important; padding: 4px !important; }
+                    .data-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
+                    span[style*="background"] { background: none !important; color: black !important; border: 1px solid #000; }
+                    td[style*="background"] { background: none !important; color: black !important; border-left: 2px solid #000 !important; border-right: 2px solid #000 !important; }
+                }
+            `}</style>
         </div>
     );
 }

@@ -159,8 +159,32 @@ router.delete('/permissions/:uuid', requireRole('admin', 'super_admin'), async (
     } catch (error) { next(error); }
 });
 
-// ═══════════════════════════════════════════════════
-// CORE CALCULATION ENGINE — exact replica of Excel formulas
+// ─── SHIFT & LATE HELPERS ──────────────────────────
+const DAY_MAP = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+const timeToMinutes = (t) => {
+    if (!t) return null;
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+};
+
+const getEmployeeShiftForDate = (empId, dateObj, shiftAssignments) => {
+    const assignments = shiftAssignments[empId];
+    if (!assignments || assignments.length === 0) return null;
+    const dateMs = dateObj.valueOf();
+    for (const assign of assignments) {
+        if (dateMs >= assign.startMs && dateMs <= assign.endMs) {
+            const dayName = DAY_MAP[dateObj.day()];
+            const dayRecord = (assign.shift.records || []).find(r => r.day === dayName);
+            return {
+                shiftName: assign.shift.name,
+                dayRecord: dayRecord || null,
+            };
+        }
+    }
+    return null;
+};
+
 // ═══════════════════════════════════════════════════
 
 /**
@@ -587,7 +611,7 @@ router.get('/details', async (req, res, next) => {
 
         const empIds = employees.map(e => e.id);
 
-        const [compOffs, permissions, leaveRequests, timesheets, prevBalances] = await Promise.all([
+        const [compOffs, permissions, leaveRequests, timesheets, rawAssignments, prevBalances] = await Promise.all([
             prisma.compOff.findMany({ where: { tenantId: req.tenantId, month: m, year: y }, orderBy: { date: 'asc' } }),
             prisma.permissionEntry.findMany({ where: { tenantId: req.tenantId, month: m, year: y }, orderBy: { date: 'asc' } }),
             prisma.leaveRequest.findMany({
@@ -601,12 +625,26 @@ router.get('/details', async (req, res, next) => {
             prisma.timesheet.findMany({
                 where: { tenantId: req.tenantId, date: { gte: startOfMonth, lte: endOfMonth }, employeeId: { in: empIds } },
             }),
+            prisma.employeeWorkShift.findMany({
+                where: { employeeId: { in: empIds }, startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth } },
+                include: { workShift: true },
+            }),
             (() => {
                 const prevMonth = m === 1 ? 12 : m - 1;
                 const prevYear = m === 1 ? y - 1 : y;
                 return prisma.monthlyBalance.findMany({ where: { tenantId: req.tenantId, month: prevMonth, year: prevYear } });
             })(),
         ]);
+
+        const shiftAssignments = {};
+        for (const a of rawAssignments) {
+            if (!shiftAssignments[a.employeeId]) shiftAssignments[a.employeeId] = [];
+            shiftAssignments[a.employeeId].push({
+                startMs: dayjs(a.startDate).startOf('day').valueOf(),
+                endMs: dayjs(a.endDate).endOf('day').valueOf(),
+                shift: a.workShift,
+            });
+        }
 
         // Index by employee
         const idx = (arr) => {
@@ -649,6 +687,17 @@ router.get('/details', async (req, res, next) => {
             // Late check-ins
             const lateCheckIns = et.filter(t => {
                 if (!t.inAt) return false;
+                const empShift = getEmployeeShiftForDate(emp.id, dayjs(t.date), shiftAssignments);
+                if (empShift && empShift.dayRecord && !empShift.dayRecord.isOff) {
+                    const shiftStartMins = timeToMinutes(empShift.dayRecord.startTime);
+                    const graceMins = empShift.dayRecord.graceMins || 0;
+                    if (shiftStartMins !== null) {
+                        const punchInMins = dayjs(t.inAt).hour() * 60 + dayjs(t.inAt).minute();
+                        const allowedStart = shiftStartMins + graceMins;
+                        return punchInMins > allowedStart;
+                    }
+                }
+                // Fallback to strict 9:15 AM
                 const h = dayjs(t.inAt).hour();
                 const min = dayjs(t.inAt).minute();
                 return h > 9 || (h === 9 && min > 15);
@@ -775,7 +824,7 @@ router.get('/summary', async (req, res, next) => {
 
         const empIds = employees.map(e => e.id);
 
-        const [compOffs, permissions, leaveRequests, timesheets, prevBalances, currentBalances] = await Promise.all([
+        const [compOffs, permissions, leaveRequests, timesheets, rawAssignments, prevBalances, currentBalances] = await Promise.all([
             prisma.compOff.findMany({ where: { tenantId: req.tenantId, month: m, year: y } }),
             prisma.permissionEntry.findMany({ where: { tenantId: req.tenantId, month: m, year: y } }),
             prisma.leaveRequest.findMany({
@@ -789,6 +838,10 @@ router.get('/summary', async (req, res, next) => {
             prisma.timesheet.findMany({
                 where: { tenantId: req.tenantId, date: { gte: startOfMonth, lte: endOfMonth }, employeeId: { in: empIds } },
             }),
+            prisma.employeeWorkShift.findMany({
+                where: { employeeId: { in: empIds }, startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth } },
+                include: { workShift: true },
+            }),
             (() => {
                 const prevMonth = m === 1 ? 12 : m - 1;
                 const prevYear = m === 1 ? y - 1 : y;
@@ -796,6 +849,16 @@ router.get('/summary', async (req, res, next) => {
             })(),
             prisma.monthlyBalance.findMany({ where: { tenantId: req.tenantId, month: m, year: y } }),
         ]);
+
+        const shiftAssignments = {};
+        for (const a of rawAssignments) {
+            if (!shiftAssignments[a.employeeId]) shiftAssignments[a.employeeId] = [];
+            shiftAssignments[a.employeeId].push({
+                startMs: dayjs(a.startDate).startOf('day').valueOf(),
+                endMs: dayjs(a.endDate).endOf('day').valueOf(),
+                shift: a.workShift,
+            });
+        }
 
         const idx = (arr) => {
             const map = {};
@@ -837,7 +900,22 @@ router.get('/summary', async (req, res, next) => {
             const elUtilised = elLeaves.reduce((s, l) => s + (l.days || 0), 0);
 
             // Late check-ins
-            const lateCheckInCount = et.filter(t => t.inAt && (dayjs(t.inAt).hour() > 9 || (dayjs(t.inAt).hour() === 9 && dayjs(t.inAt).minute() > 15))).length;
+            const lateCheckInCount = et.filter(t => {
+                if (!t.inAt) return false;
+                const empShift = getEmployeeShiftForDate(emp.id, dayjs(t.date), shiftAssignments);
+                if (empShift && empShift.dayRecord && !empShift.dayRecord.isOff) {
+                    const shiftStartMins = timeToMinutes(empShift.dayRecord.startTime);
+                    const graceMins = empShift.dayRecord.graceMins || 0;
+                    if (shiftStartMins !== null) {
+                        const punchInMins = dayjs(t.inAt).hour() * 60 + dayjs(t.inAt).minute();
+                        const allowedStart = shiftStartMins + graceMins;
+                        return punchInMins > allowedStart;
+                    }
+                }
+                const h = dayjs(t.inAt).hour();
+                const min = dayjs(t.inAt).minute();
+                return h > 9 || (h === 9 && min > 15);
+            }).length;
 
             // Permissions
             const permTotalHours = ep.reduce((s, p) => s + (p.hours || 0), 0);
