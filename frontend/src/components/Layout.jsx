@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard, Users, Building2, Clock, CheckCircle2,
     CalendarOff, GraduationCap, UserSquare2, Megaphone,
-    HardDrive, LogOut, Settings, FileText, Briefcase
+    HardDrive, LogOut, Settings, FileText, Briefcase, CalendarCheck
 } from 'lucide-react';
 
 export default function Layout() {

@@ -50,6 +50,9 @@ model Tenant {
   announcements      Announcement[]
   devices            Device[]
   deviceLogs         DeviceLog[]
+  compOffs           CompOff[]
+  permissionEntries  PermissionEntry[]
+  monthlyBalances    MonthlyBalance[]
 
   @@map("tenants")
 }
@@ -76,6 +79,7 @@ model User {
   reviewedTimesheets   Timesheet[]       @relation("TimesheetReviewer")
   reviewedLeaves       LeaveRequest[]    @relation("LeaveReviewer")
   createdAnnouncements Announcement[]    @relation("AnnouncementCreator")
+  approvedCompOffs     CompOff[]         @relation("CompOffApprover")
 
   @@unique([tenantId, username])
   @@map("users")
@@ -169,6 +173,8 @@ model Employee {
   joiningDate   DateTime  @map("joining_date") @db.Date
   leavingDate   DateTime? @map("leaving_date") @db.Date
   type          String    @default("full_time") // full_time, part_time, contract, teaching, non_teaching
+  category      String    @default("confirmed") // confirmed, time_scale, contract, adhoc, part_time
+  leaveStartMonth Int?    @map("leave_start_month") // month (1-12) when leave system starts for this employee
   status        String    @default("active") // active, inactive, terminated
   config        Json?     @default("{}")
   meta          Json?     @default("{}")
@@ -187,6 +193,9 @@ model Employee {
   leaveAllocations     LeaveAllocation[]
   leaveRequests        LeaveRequest[]
   batchSubjects        BatchSubject[]
+  compOffs             CompOff[]
+  permissionEntries    PermissionEntry[]
+  monthlyBalances      MonthlyBalance[]
 
   @@unique([tenantId, employeeCode])
   @@map("employees")
@@ -672,4 +681,84 @@ model DeviceLog {
 
   @@index([deviceId, processed])
   @@map("device_logs")
+}
+
+// ─────────────────────────────────────────────
+// COMP-OFF & PERMISSION TRACKING
+// ─────────────────────────────────────────────
+
+model CompOff {
+  id          Int       @id @default(autoincrement())
+  uuid        String    @unique @default(uuid())
+  tenantId    Int       @map("tenant_id")
+  employeeId  Int       @map("employee_id")
+  date        DateTime  @db.Date              // date worked on off-day
+  hours       Float     @default(0)           // hours worked
+  days        Float     @default(0)           // hours / 8
+  reason      String?
+  status      String    @default("pending")   // pending, approved, rejected
+  approvedBy  Int?      @map("approved_by")
+  month       Int                             // reference month (1-12)
+  year        Int                             // reference year
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  approver User?    @relation("CompOffApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, employeeId, month, year])
+  @@map("comp_offs")
+}
+
+model PermissionEntry {
+  id          Int       @id @default(autoincrement())
+  uuid        String    @unique @default(uuid())
+  tenantId    Int       @map("tenant_id")
+  employeeId  Int       @map("employee_id")
+  date        DateTime  @db.Date
+  type        String                          // late_coming, early_going, general
+  hours       Float     @default(0)           // duration in hours
+  days        Float     @default(0)           // hours / 8
+  remarks     String?
+  month       Int
+  year        Int
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, employeeId, month, year])
+  @@map("permission_entries")
+}
+
+model MonthlyBalance {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  tenantId        Int      @map("tenant_id")
+  employeeId      Int      @map("employee_id")
+  month           Int                        // 1-12
+  year            Int
+  // Comp-Off balance
+  compOffDays     Float    @default(0) @map("comp_off_days")
+  compOffHours    Float    @default(0) @map("comp_off_hours")
+  // Leave balances
+  clBalance       Float    @default(0) @map("cl_balance")
+  slBalance       Float    @default(0) @map("sl_balance")
+  elBalance       Float    @default(0) @map("el_balance")
+  // Late/Early/Gen Permission balance
+  lateEarlyDays   Float    @default(0) @map("late_early_days")
+  lateEarlyHours  Float    @default(0) @map("late_early_hours")
+  // LOP
+  lopDays         Float    @default(0) @map("lop_days")
+  isClosed        Boolean  @default(false) @map("is_closed") // month finalized
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, month, year])
+  @@map("monthly_balances")
 }

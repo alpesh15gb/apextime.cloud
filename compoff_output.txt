@@ -1,0 +1,9 @@
+﻿NOTES:,
+1,8 hours = 1 day.
+2,CL=Casual Leave; SL=Sick Leave; EL=Earned Leave.
+3,"If SL is applied, no half-day leave is allowed and only 50% salary will be given."
+4,Dates must be in dd-mm-yyyy format.
+5,"Dates in the Columns ""SL AVAILED"" and ""EL/VACATION UTILISED"" are to be entered directly and not to be Cut/Copy from other Cells."
+6,All Comp-offs must be authenticated by the respective Unit-heads and the Director.
+7,'Late C' means Late Coming; 'Early G' means Early Going and 'Gen.' means General.
+8,"In ""Summary"" Worksheet, under ""BAL. OF COMP-OFF/LEAVES/LATE-EARLY C/f. TO NEXT MONTH"", the Leaves which show NEGATIVE values, will become ""0""(zero) in the next month."

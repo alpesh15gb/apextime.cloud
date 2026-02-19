@@ -17,6 +17,7 @@ import Devices from './pages/Devices';
 import Tenants from './pages/Tenants';
 import Reports from './pages/Reports';
 import WorkShifts from './pages/WorkShifts';
+import CompOff from './pages/CompOff';
 import './index.css';
 
 function ProtectedRoute({ children, adminOnly }) {
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path="announcements" element={<Announcements />} />
         <Route path="devices" element={<Devices />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="compoff" element={<CompOff />} />
         <Route path="tenants" element={<Tenants />} />
       </Route>
 
