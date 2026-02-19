@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import dayjs from 'dayjs';
-import { Plus, X, Check, XCircle, Lock, Download, ChevronLeft, ChevronRight, Search, Clock, CalendarDays, Stethoscope, Palmtree, AlertTriangle } from 'lucide-react';
+import { Plus, X, Check, XCircle, Lock, Download, ChevronLeft, ChevronRight, Search, Clock, CalendarDays, Stethoscope, Palmtree, AlertTriangle, Settings, Zap } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -24,6 +24,8 @@ export default function CompOff() {
     const [compOffForm, setCompOffForm] = useState({ date: '', hours: '', reason: '' });
     const [permForm, setPermForm] = useState({ date: '', type: 'late_coming', hours: '' });
     const [employees, setEmployees] = useState([]);
+    const [setupMsg, setSetupMsg] = useState('');
+    const [bulkForm, setBulkForm] = useState({ month: String(dayjs().month()), year: String(dayjs().year()), cl: '12', sl: '12', el: '0' });
 
     const loadData = async () => {
         setLoading(true);
@@ -138,6 +140,12 @@ export default function CompOff() {
                         color: activeTab === 'summary' ? '#fff' : 'var(--text-secondary)',
                         transition: 'var(--transition)',
                     }} onClick={() => setActiveTab('summary')}>Summary</button>
+                    <button style={{
+                        padding: '6px 18px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                        background: activeTab === 'setup' ? 'var(--primary)' : 'transparent',
+                        color: activeTab === 'setup' ? '#fff' : 'var(--text-secondary)',
+                        transition: 'var(--transition)',
+                    }} onClick={() => setActiveTab('setup')}><Settings size={13} style={{ verticalAlign: -2, marginRight: 4 }} />Setup</button>
                 </div>
                 <div style={{ position: 'relative', marginLeft: 'auto' }}>
                     <Search size={14} style={{ position: 'absolute', left: 10, top: 9, color: 'var(--text-muted)' }} />
@@ -517,6 +525,98 @@ export default function CompOff() {
                                 <button type="submit" className="btn btn-primary">Add</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ═════════ SETUP TAB ═════════ */}
+            {activeTab === 'setup' && (
+                <div>
+                    <div className="card" style={{ padding: 24, marginBottom: 20 }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-primary)' }}>
+                            <Zap size={18} style={{ verticalAlign: -3, marginRight: 8, color: 'var(--warning)' }} />
+                            First-Time Setup Guide
+                        </h3>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.8 }}>
+                            <div style={{ display: 'grid', gap: 12 }}>
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                    <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>1</span>
+                                    <div><strong style={{ color: 'var(--text-primary)' }}>Seed Leave Types</strong> — Click below to create CL (Casual Leave), SL (Sick Leave) and EL (Earned Leave) in the system. Only needed once.</div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                    <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>2</span>
+                                    <div><strong style={{ color: 'var(--text-primary)' }}>Set Employee Categories</strong> — Go to Employees page → edit each employee → set <strong>Category</strong> (Confirmed, Time-Scale, etc.) and <strong>Leave Start Month</strong>.</div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                    <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>3</span>
+                                    <div><strong style={{ color: 'var(--text-primary)' }}>Set Initial Balances</strong> — Set the starting CL/SL/EL balance for all employees for the previous month. This gives the system a starting point.</div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                    <span style={{ background: 'var(--success)', color: '#fff', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>✓</span>
+                                    <div><strong style={{ color: 'var(--text-primary)' }}>Done!</strong> — From now on, just go to Details tab each month to add Comp-Off and Permission entries. Everything else (CL, SL, EL, Late counts, LOP) is calculated automatically.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {setupMsg && (
+                        <div className="toast toast-success" style={{ position: 'relative', marginBottom: 16 }}>{setupMsg}</div>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                        {/* Seed Leave Types */}
+                        <div className="card" style={{ padding: 24 }}>
+                            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Step 1: Seed Leave Types</h4>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 16 }}>Creates CL, SL, EL leave types if they don't exist. Safe to click multiple times.</p>
+                            <button className="btn btn-primary" onClick={async () => {
+                                try {
+                                    const res = await api.post('/compoff/seed-leave-types');
+                                    setSetupMsg(`✅ ${res.data.results.map(r => `${r.code}: ${r.action}`).join(', ')}`);
+                                } catch (err) { setSetupMsg('❌ ' + (err.response?.data?.error || 'Failed')); }
+                            }}>Seed CL / SL / EL</button>
+                        </div>
+
+                        {/* Bulk Set Initial Balance */}
+                        <div className="card" style={{ padding: 24 }}>
+                            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Step 3: Set Initial Balances (All Employees)</h4>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 12 }}>Sets starting CL/SL/EL for ALL active employees for the selected month. This is the month <em>before</em> you start tracking.</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+                                <div>
+                                    <label className="form-label">Month</label>
+                                    <select className="form-input" value={bulkForm.month} onChange={e => setBulkForm({ ...bulkForm, month: e.target.value })}>
+                                        {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="form-label">Year</label>
+                                    <input type="number" className="form-input" value={bulkForm.year} onChange={e => setBulkForm({ ...bulkForm, year: e.target.value })} />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+                                <div>
+                                    <label className="form-label">CL Balance</label>
+                                    <input type="number" className="form-input" value={bulkForm.cl} onChange={e => setBulkForm({ ...bulkForm, cl: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="form-label">SL Balance</label>
+                                    <input type="number" className="form-input" value={bulkForm.sl} onChange={e => setBulkForm({ ...bulkForm, sl: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="form-label">EL Balance</label>
+                                    <input type="number" className="form-input" value={bulkForm.el} onChange={e => setBulkForm({ ...bulkForm, el: e.target.value })} />
+                                </div>
+                            </div>
+                            <button className="btn btn-primary" onClick={async () => {
+                                if (!confirm(`Set CL=${bulkForm.cl}, SL=${bulkForm.sl}, EL=${bulkForm.el} for ALL employees at ${MONTHS[bulkForm.month]} ${bulkForm.year}?`)) return;
+                                try {
+                                    const res = await api.post('/compoff/bulk-set-initial-balance', {
+                                        month: parseInt(bulkForm.month) + 1, year: parseInt(bulkForm.year),
+                                        clBalance: bulkForm.cl, slBalance: bulkForm.sl, elBalance: bulkForm.el,
+                                    });
+                                    setSetupMsg(`✅ ${res.data.message}`);
+                                } catch (err) { setSetupMsg('❌ ' + (err.response?.data?.error || 'Failed')); }
+                            }}>Set Balances for All Employees</button>
+                        </div>
                     </div>
                 </div>
             )}

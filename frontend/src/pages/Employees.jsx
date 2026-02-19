@@ -10,7 +10,7 @@ export default function Employees() {
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [editItem, setEditItem] = useState(null);
-    const [form, setForm] = useState({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '' });
+    const [form, setForm] = useState({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '', category: 'confirmed', leaveStartMonth: '' });
 
     const loadData = () => {
         Promise.all([
@@ -42,7 +42,7 @@ export default function Employees() {
             }
             setShowModal(false);
             setEditItem(null);
-            setForm({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '' });
+            setForm({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '', category: 'confirmed', leaveStartMonth: '' });
             loadData();
         } catch (err) {
             alert(err.response?.data?.error || err.response?.data?.message || 'Failed to save');
@@ -56,6 +56,7 @@ export default function Employees() {
             email: emp.email || '', phone: emp.phone || '', gender: emp.gender || 'male',
             departmentId: emp.departmentId || '', designationId: emp.designationId || '',
             joiningDate: emp.joiningDate?.split('T')[0] || '', password: '',
+            category: emp.category || 'confirmed', leaveStartMonth: emp.leaveStartMonth || '',
         });
         setShowModal(true);
     };
@@ -81,7 +82,7 @@ export default function Employees() {
                     <button className="btn btn-ghost btn-sm" onClick={generateUsers} title="Create portal accounts for employees" style={{ marginRight: '8px', border: '1px solid var(--border)' }}>
                         <Key size={16} style={{ marginRight: '6px' }} /> Enable Portal Access
                     </button>
-                    <button className="btn btn-primary" onClick={() => { setEditItem(null); setForm({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '' }); setShowModal(true); }}>
+                    <button className="btn btn-primary" onClick={() => { setEditItem(null); setForm({ employeeCode: '', firstName: '', lastName: '', email: '', phone: '', gender: 'male', departmentId: '', designationId: '', joiningDate: '', password: '', category: 'confirmed', leaveStartMonth: '' }); setShowModal(true); }}>
                         <Plus size={16} /> Add Employee
                     </button>
                 </div>
@@ -184,6 +185,26 @@ export default function Employees() {
                                         <label className="form-label">Joining Date</label>
                                         <input className="form-input" type="date" value={form.joiningDate} onChange={e => setForm({ ...form, joiningDate: e.target.value })} />
                                     </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Category</label>
+                                        <select className="form-select" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                                            <option value="confirmed">Confirmed</option>
+                                            <option value="time_scale">Time-Scale</option>
+                                            <option value="contract">Contract</option>
+                                            <option value="adhoc">Adhoc</option>
+                                            <option value="part_time">Part-Time</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Leave Start Month</label>
+                                    <select className="form-select" value={form.leaveStartMonth} onChange={e => setForm({ ...form, leaveStartMonth: e.target.value ? parseInt(e.target.value) : '' })}>
+                                        <option value="">Not Set</option>
+                                        <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                                        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                                        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                                        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                                    </select>
                                 </div>
                                 {!editItem && (
                                     <div className="form-group">

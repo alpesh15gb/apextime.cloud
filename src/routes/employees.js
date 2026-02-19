@@ -53,6 +53,8 @@ router.get('/', async (req, res, next) => {
                 joiningDate: e.joiningDate,
                 leavingDate: e.leavingDate,
                 type: e.type,
+                category: e.category,
+                leaveStartMonth: e.leaveStartMonth,
                 status: e.status,
             })),
             pagination: {
@@ -90,7 +92,7 @@ router.post('/', requireRole('admin', 'super_admin'), async (req, res, next) => 
         const {
             employeeCode, firstName, lastName, email, phone, gender, dateOfBirth,
             address, city, state, pincode, bloodGroup,
-            departmentId, designationId, joiningDate, type,
+            departmentId, designationId, joiningDate, type, category, leaveStartMonth,
             createUser, password,
         } = req.body;
 
@@ -126,6 +128,8 @@ router.post('/', requireRole('admin', 'super_admin'), async (req, res, next) => 
                     designationId: parseId(designationId),
                     joiningDate: new Date(joiningDate || Date.now()),
                     type: type || 'full_time',
+                    category: category || 'confirmed',
+                    leaveStartMonth: leaveStartMonth ? parseInt(leaveStartMonth) : null,
                 },
                 include: { contact: true, department: true, designation: true },
             });
@@ -164,7 +168,7 @@ router.put('/:uuid', requireRole('admin', 'super_admin'), async (req, res, next)
         const {
             employeeCode, firstName, lastName, email, phone, gender, dateOfBirth,
             address, city, state, pincode, bloodGroup,
-            departmentId, designationId, joiningDate, leavingDate, type, status,
+            departmentId, designationId, joiningDate, leavingDate, type, status, category, leaveStartMonth,
         } = req.body;
 
         const result = await prisma.$transaction(async (tx) => {
@@ -204,6 +208,8 @@ router.put('/:uuid', requireRole('admin', 'super_admin'), async (req, res, next)
             if (leavingDate !== undefined) employeeData.leavingDate = leavingDate ? new Date(leavingDate) : null;
             if (type) employeeData.type = type;
             if (status) employeeData.status = status;
+            if (category) employeeData.category = category;
+            if (leaveStartMonth !== undefined) employeeData.leaveStartMonth = leaveStartMonth ? parseInt(leaveStartMonth) : null;
 
             return tx.employee.update({
                 where: { id: employee.id },

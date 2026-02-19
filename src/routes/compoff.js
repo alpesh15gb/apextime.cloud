@@ -1014,4 +1014,135 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
     } catch (error) { next(error); }
 });
 
+// ─── SETUP HELPERS ───────────────────────────────
+
+// POST /api/compoff/seed-leave-types — ensure CL, SL, EL leave types exist
+router.post('/seed-leave-types', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const types = [
+            { code: 'CL', name: 'Casual Leave', maxDays: 12, color: '#3b82f6' },
+            { code: 'SL', name: 'Sick Leave', maxDays: 12, color: '#f59e0b' },
+            { code: 'EL', name: 'Earned Leave', maxDays: 30, color: '#22c55e' },
+        ];
+        const results = [];
+        for (const t of types) {
+            const existing = await prisma.leaveType.findUnique({
+                where: { tenantId_code: { tenantId: req.tenantId, code: t.code } },
+            });
+            if (!existing) {
+                const created = await prisma.leaveType.create({
+                    data: { tenantId: req.tenantId, ...t },
+                });
+                results.push({ ...t, action: 'created', id: created.id });
+            } else {
+                results.push({ ...t, action: 'already exists', id: existing.id });
+            }
+        }
+        res.json({ message: 'Leave types seeded', results });
+    } catch (error) { next(error); }
+});
+
+// POST /api/compoff/set-initial-balance — set starting balances for employees
+router.post('/set-initial-balance', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const { employeeId, month, year, clBalance, slBalance, elBalance, compOffDays, compOffHours } = req.body;
+
+        if (!employeeId || !month || !year) {
+            return res.status(400).json({ error: 'employeeId, month, and year are required' });
+        }
+
+        const m = parseInt(month);
+        const y = parseInt(year);
+
+        const balance = await prisma.monthlyBalance.upsert({
+            where: {
+                tenantId_employeeId_month_year: {
+                    tenantId: req.tenantId,
+                    employeeId: parseInt(employeeId),
+                    month: m,
+                    year: y,
+                },
+            },
+            update: {
+                clBalance: parseFloat(clBalance || 0),
+                slBalance: parseFloat(slBalance || 0),
+                elBalance: parseFloat(elBalance || 0),
+                compOffDays: parseFloat(compOffDays || 0),
+                compOffHours: parseFloat(compOffHours || 0),
+                isClosed: true,
+            },
+            create: {
+                tenantId: req.tenantId,
+                employeeId: parseInt(employeeId),
+                month: m,
+                year: y,
+                clBalance: parseFloat(clBalance || 0),
+                slBalance: parseFloat(slBalance || 0),
+                elBalance: parseFloat(elBalance || 0),
+                compOffDays: parseFloat(compOffDays || 0),
+                compOffHours: parseFloat(compOffHours || 0),
+                isClosed: true,
+            },
+        });
+
+        res.json({ message: `Initial balance set for employee ${employeeId} at ${m}/${y}`, balance });
+    } catch (error) { next(error); }
+});
+
+// POST /api/compoff/bulk-set-initial-balance — set starting CL/SL for ALL employees at once
+router.post('/bulk-set-initial-balance', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        const { month, year, clBalance, slBalance, elBalance } = req.body;
+
+        if (!month || !year) {
+            return res.status(400).json({ error: 'month and year are required' });
+        }
+
+        const m = parseInt(month);
+        const y = parseInt(year);
+
+        const employees = await prisma.employee.findMany({
+            where: { tenantId: req.tenantId, status: 'active' },
+            select: { id: true },
+        });
+
+        let created = 0;
+        let updated = 0;
+        for (const emp of employees) {
+            const existing = await prisma.monthlyBalance.findUnique({
+                where: { tenantId_employeeId_month_year: { tenantId: req.tenantId, employeeId: emp.id, month: m, year: y } },
+            });
+
+            if (existing) {
+                await prisma.monthlyBalance.update({
+                    where: { id: existing.id },
+                    data: {
+                        clBalance: parseFloat(clBalance || 0),
+                        slBalance: parseFloat(slBalance || 0),
+                        elBalance: parseFloat(elBalance || 0),
+                        isClosed: true,
+                    },
+                });
+                updated++;
+            } else {
+                await prisma.monthlyBalance.create({
+                    data: {
+                        tenantId: req.tenantId,
+                        employeeId: emp.id,
+                        month: m,
+                        year: y,
+                        clBalance: parseFloat(clBalance || 0),
+                        slBalance: parseFloat(slBalance || 0),
+                        elBalance: parseFloat(elBalance || 0),
+                        isClosed: true,
+                    },
+                });
+                created++;
+            }
+        }
+
+        res.json({ message: `Bulk initial balance set for ${m}/${y}: ${created} created, ${updated} updated`, created, updated });
+    } catch (error) { next(error); }
+});
+
 module.exports = router;
