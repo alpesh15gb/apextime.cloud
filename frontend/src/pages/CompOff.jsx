@@ -399,24 +399,24 @@ export default function CompOff() {
                                         <td style={{ padding: 4, fontSize: 10 }}>{CAT_LABELS[emp.category] || emp.category}</td>
                                         <td style={{ padding: 4, textAlign: 'center' }}>{emp.daysPresent}</td>
                                         {/* Current */}
-                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current.compOffDays || '-'}</td>
-                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current.clAvailed || '-'}</td>
-                                        <td style={{ padding: 4, textAlign: 'center', color: emp.current.lateCheckIns > 0 ? '#dc2626' : '' }}>{emp.current.lateCheckIns || '-'}</td>
-                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current.permDays || '-'}</td>
-                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current.slAvailed || '-'}</td>
-                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current.elUtilised || '-'}</td>
-                                        {/* Previous */}
-                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.previous.compOffDays || '-'}</td>
-                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.previous.cl || '-'}</td>
-                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.previous.sl || '-'}</td>
-                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.previous.el || '-'}</td>
-                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.previous.lateEarlyDays || '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current?.compOffDays || '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current?.clAvailed || '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', color: emp.current?.lateCheckIns > 0 ? '#dc2626' : '' }}>{emp.current?.lateCheckIns ? `${emp.current.lateCheckIns}→${emp.current.lateCheckInDays}d` : '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current?.permDays || '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current?.slAvailed || '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center' }}>{emp.current?.elUtilised || '-'}</td>
+                                        {/* Available/Accumulated */}
+                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.available?.compOffDays || '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.available?.cl || '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.available?.sl || '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.available?.el || '-'}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', background: '#f9fafb' }}>{emp.available?.permDays || '-'}</td>
                                         {/* Balance */}
-                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600 }}>{emp.balance.compOffDays}</td>
-                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600 }}>{emp.balance.cl}</td>
-                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600 }}>{emp.balance.sl}</td>
-                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600 }}>{emp.balance.el}</td>
-                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600 }}>{emp.balance.lateEarlyDays}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600 }}>{emp.balance?.compOffDays ?? 0}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600, color: emp.balance?.cl < 0 ? '#dc2626' : '' }}>{emp.balance?.cl ?? 0}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600, color: emp.balance?.sl < 0 ? '#dc2626' : '' }}>{emp.balance?.sl ?? 0}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600, color: emp.balance?.el < 0 ? '#dc2626' : '' }}>{emp.balance?.el ?? 0}</td>
+                                        <td style={{ padding: 4, textAlign: 'center', fontWeight: 600 }}>{emp.balance?.permHours ?? 0}</td>
                                         {/* LOP/Status */}
                                         <td style={{ padding: 4, textAlign: 'center', color: emp.lopDays > 0 ? '#dc2626' : '', fontWeight: emp.lopDays > 0 ? 700 : 400 }}>{emp.lopDays || 0}</td>
                                         <td style={{ padding: 4, textAlign: 'center' }}>

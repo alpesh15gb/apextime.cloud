@@ -46,7 +46,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', requireRole('admin', 'super_admin'), async (req, res, next) => {
     try {
         const { employeeId, date, hours, reason, month, year } = req.body;
-        const days = parseFloat((hours / 8).toFixed(2));
+        const days = parseFloat((hours / 8).toFixed(4));
 
         const entry = await prisma.compOff.create({
             data: {
@@ -107,9 +107,7 @@ router.get('/permissions', async (req, res, next) => {
 
         const entries = await prisma.permissionEntry.findMany({
             where,
-            include: {
-                employee: { include: { contact: true } },
-            },
+            include: { employee: { include: { contact: true } } },
             orderBy: [{ employeeId: 'asc' }, { date: 'asc' }],
         });
 
@@ -134,14 +132,14 @@ router.get('/permissions', async (req, res, next) => {
 router.post('/permissions', requireRole('admin', 'super_admin'), async (req, res, next) => {
     try {
         const { employeeId, date, type, hours, remarks, month, year } = req.body;
-        const days = parseFloat((hours / 8).toFixed(2));
+        const days = parseFloat((hours / 8).toFixed(4));
 
         const entry = await prisma.permissionEntry.create({
             data: {
                 tenantId: req.tenantId,
                 employeeId: parseInt(employeeId),
                 date: new Date(date),
-                type, // late_coming, early_going, general
+                type,
                 hours: parseFloat(hours),
                 days,
                 remarks,
@@ -161,6 +159,414 @@ router.delete('/permissions/:uuid', requireRole('admin', 'super_admin'), async (
     } catch (error) { next(error); }
 });
 
+// ═══════════════════════════════════════════════════
+// CORE CALCULATION ENGINE — exact replica of Excel formulas
+// ═══════════════════════════════════════════════════
+
+/**
+ * Hours-to-days overflow: when totalHours >= 8, convert overflow to days.
+ * Excel: Days = INT(totalHrs/8), Hours = totalHrs - INT(totalHrs/8)*8
+ */
+function overflowHoursToDays(prevDays, prevHours, currentDays, currentHours) {
+    const totalHours = (prevHours || 0) + (currentHours || 0);
+    const overflowDays = totalHours >= 8 ? Math.floor(totalHours / 8) : 0;
+    const remainingHours = totalHours >= 8 ? totalHours - overflowDays * 8 : totalHours;
+    const totalDays = (prevDays || 0) + (currentDays || 0) + overflowDays;
+    return { days: totalDays, hours: remainingHours };
+}
+
+/**
+ * Comp-Off Converted into Days/Hours
+ * Excel: L14 = I38 + IF(J38>=8, INT(J38/8), 0)    ← total days + overflow from hours
+ *        M14 = IF(J38>=8, J38 - INT(J38/8)*8, J38) ← remaining hours after overflow
+ * (I38 = SUM of compoff Days column, J38 = SUM of compoff Hours column)
+ */
+function convertCompOffDaysHours(totalCompOffDays, totalCompOffHours) {
+    const overflowDays = totalCompOffHours >= 8 ? Math.floor(totalCompOffHours / 8) : 0;
+    const remainingHours = totalCompOffHours >= 8 ? totalCompOffHours - overflowDays * 8 : totalCompOffHours;
+    return { days: totalCompOffDays + overflowDays, hours: remainingHours };
+}
+
+/**
+ * Late C/Early G/Gen Perm → Converted into Days/Hours
+ * Excel: X14 = IF(W38>=8, INT(W38/8), 0)
+ *        Y14 = IF(X14>0, W38 - X14*8, W38)
+ */
+function convertPermDaysHours(totalPermHours) {
+    const days = totalPermHours >= 8 ? Math.floor(totalPermHours / 8) : 0;
+    const hours = days > 0 ? totalPermHours - days * 8 : totalPermHours;
+    return { days, hours };
+}
+
+/**
+ * SL Availed validation
+ * Excel: AB14=IF(COUNT(AA14:AA37) > AP14, "ERROR - Cannot avail more than SL balance", COUNT(AA14:AA37))
+ */
+function validateSlAvailed(slCount, slBalance) {
+    if (slCount > slBalance) return { error: true, count: slCount, message: 'Cannot avail more than SL balance' };
+    return { error: false, count: slCount };
+}
+
+/**
+ * Late Check-In → Days conversion: 3 lates = 1 day
+ * Excel: L17 = INT(Details!S14/3)
+ */
+function lateCheckInToDays(lateCount) {
+    return Math.floor(lateCount / 3);
+}
+
+/**
+ * EL/Vacation Credited — auto-credit on the employee's leave-start month
+ * Excel: AD15=IF($E$3="January",DATE($F$3,1,1),""), AE15=IF($E$3="January",15,"")
+ * Each employee has their own leave-start month; EL is credited in Jan and June (or their specific month)
+ */
+function getElCredited(leaveStartMonth, currentMonth, currentYear, category) {
+    // standard: 15 days credited in Jan and June for most categories
+    // Different allocations per category can be configured here
+    const creditMonths = [1, 6]; // January and June
+    if (!leaveStartMonth) return 0;
+    if (currentMonth === leaveStartMonth || creditMonths.includes(currentMonth)) {
+        // Confirmed/Time-Scale: 15; Contract: 15; Part-time/Adhoc: varies
+        if (category === 'confirmed' || category === 'time_scale') return 15;
+        if (category === 'contract') return 15;
+        if (category === 'adhoc') return 10;
+        if (category === 'part_time') return 8;
+        return 15;
+    }
+    return 0;
+}
+
+/**
+ * SUMMARY CALCULATION — The core Excel formula replicated
+ *
+ * Variables (matching Excel columns):
+ *   K = CL Availed (days)
+ *   L = Late Check-In → days (INT(lateCount/3))
+ *   Q = SL Availed (days)
+ *   T = Available CL (prev or fresh if leave-start month)
+ *   U = Available SL
+ *   V = Available EL (prev + credited this month)
+ *   X = Available Comp-Off Days (prev + current, with hour overflow)
+ *   Y = Available Comp-Off Hours (remaining after overflow)
+ *   AA = Available Late C/Early G/Gen Perm Days (prev + current, with hour overflow)
+ *   AB = Available Late C/Early G/Gen Perm Hours (remaining)
+ *
+ * ADJUSTED section — how comp-off/leaves are consumed:
+ *   AD = Comp-Off Days adjusted (used to cover CL+Late+Perm+SL deficits)
+ *   AE = Comp-Off Hours adjusted
+ *   AG = CL adjusted (consumed from available CL)
+ *   AH = Late Check-In days adjusted (consumed from available CL)
+ *   AI = Late C/Early G/Gen Perm adjusted
+ *   AJ = Total adjusted (AG+AH+AI)
+ *   AL = SL adjusted
+ *   AN = CL leftover from EL
+ *   AO = Late Check-In leftover from EL
+ *   AP = Late C/Early G/Gen Perm leftover from EL
+ *   AQ = EL utilised
+ *   AR = Total EL adjusted
+ *
+ * BALANCE c/f:
+ *   AT = Comp-Off Days remaining (X - AD)
+ *   AU = Comp-Off Hours remaining (Y - AE)
+ *   AW = CL balance (T - AJ)
+ *   AX = SL balance (U - AL)
+ *   AY = EL balance (V - AR)
+ *   AZ = Late/Early hours remaining
+ *
+ * LOP:
+ *   BC = IF(AW<0, |AW|, 0) + IF(AL>0, AL/2, 0) + IF(AY<0, |AY|, 0)
+ *   BB = IF(BC>0, "LOP", "FULL")
+ */
+function calculateSummary({
+    clAvailed,         // K - CL days availed this month
+    lateCheckInCount,  // raw count of late check-ins
+    slAvailed,         // Q - SL days availed this month
+    elUtilised,        // AQ - EL days utilised this month
+    elCredited,        // R - EL credited this month
+    compOffDaysCurrent,   // current month comp-off days (from Details L column conversion)
+    compOffHoursCurrent,  // current month comp-off hours (from Details M column conversion)
+    permDaysCurrent,   // current month perm days (from Details X column conversion)
+    permHoursCurrent,  // current month perm hours (from Details Y column conversion)
+    prevCl,            // T prev or fresh CL balance
+    prevSl,            // U prev or fresh SL balance
+    prevElBalance,     // previous EL balance
+    prevCompOffDays,   // AL prev comp-off days
+    prevCompOffHours,  // AM prev comp-off hours
+    prevPermDays,      // AS prev perm days
+    prevPermHours,     // AT prev perm hours
+}) {
+    // L = Late check-in days (3 lates = 1 day)
+    const L = lateCheckInToDays(lateCheckInCount);
+
+    const K = clAvailed;
+    const Q = slAvailed;
+
+    // T, U = Available CL, SL
+    const T = prevCl;
+    const U = prevSl;
+
+    // V = Available EL = prev EL + credited this month
+    const V = prevElBalance + (elCredited || 0);
+
+    // X, Y = Available Comp-Off (prev + current with 8hr overflow)
+    const compOff = overflowHoursToDays(prevCompOffDays, prevCompOffHours, compOffDaysCurrent, compOffHoursCurrent);
+    const X = compOff.days;
+    const Y = compOff.hours;
+
+    // AA, AB = Available Late C/Early G/Gen Perm (prev + current with 8hr overflow)
+    const perm = overflowHoursToDays(prevPermDays, prevPermHours, permDaysCurrent, permHoursCurrent);
+    const AA = perm.days;
+    const AB = perm.hours;
+
+    // ─── ADJUSTMENT CALCULATION (Excel AD formula) ───
+    // AD17 = IF(X<=K, X, K + IF(X-K<=L, X-K, L + IF(X-K-L<=AA, X-K-L, AA + IF(X-K-L-AA<=Q, X-K-L-AA, Q))))
+    // This is: min(X, K + L + AA + Q) — comp-off used to cover cascading deficits
+    let AD;
+    if (X <= K) {
+        AD = X;
+    } else {
+        let surplus = X - K;
+        let lateUsed = Math.min(surplus, L);
+        surplus -= lateUsed;
+        let permUsed = Math.min(surplus, AA);
+        surplus -= permUsed;
+        let slUsed = Math.min(surplus, Q);
+        AD = K + lateUsed + permUsed + slUsed;
+    }
+
+    // AE17 = IF(Y<=AB, Y, AB) — comp-off hours adjusted (capped at perm hours)
+    const AE = Math.min(Y, AB);
+
+    // ─── CL ADJUSTED (AG) ───
+    // AG17 = IF(V=0, IF(K>X, K-X, 0), IF(K>X, IF(T<=(K-X), T, K-X), 0))
+    let AG;
+    if (V === 0) {
+        AG = K > X ? K - X : 0;
+    } else {
+        if (K > X) {
+            AG = T <= (K - X) ? T : K - X;
+        } else {
+            AG = 0;
+        }
+    }
+
+    // ─── LATE CHECK-IN ADJUSTED (AH) ───
+    // Complex nested IF — how many late-days are consumed from CL balance
+    let AH;
+    if (V === 0) {
+        if (K >= X) {
+            AH = L;
+        } else {
+            AH = (X - K) < L ? L - (X - K) : 0;
+        }
+    } else {
+        if (K >= X) {
+            if (T <= (K - X)) {
+                AH = 0;
+            } else {
+                AH = (T - (K - X)) <= L ? T - (K - X) : L;
+            }
+        } else {
+            if ((X - K) < L) {
+                AH = T <= (L - (X - K)) ? T : L - (X - K);
+            } else {
+                AH = 0;
+            }
+        }
+    }
+
+    // ─── LATE C/EARLY G/GEN PERM ADJUSTED (AI) ───
+    // Extremely complex nested IF
+    let AI;
+    if (V === 0) {
+        if (K >= X) {
+            AI = AA;
+        } else {
+            if ((X - K) < L) {
+                AI = AA;
+            } else {
+                AI = (X - K - L) < AA ? AA - (X - K - L) : 0;
+            }
+        }
+    } else {
+        if (K >= X) {
+            if (T <= (K - X)) {
+                AI = 0;
+            } else {
+                if ((T - (K - X)) <= L) {
+                    AI = 0;
+                } else {
+                    let diff = T - (K - (X - L));
+                    AI = diff <= AA ? diff : AA;
+                }
+            }
+        } else {
+            if ((X - K) < L) {
+                if (T <= (L - (X - K))) {
+                    AI = 0;
+                } else {
+                    let diff = T - (L - (X - K));
+                    AI = diff <= AA ? diff : AA;
+                }
+            } else {
+                if ((X - K - L) < AA) {
+                    if (T <= (L - (X - K))) {
+                        AI = 0;
+                    } else {
+                        let remaining = AA - (X - K - L);
+                        AI = T <= remaining ? T : remaining;
+                    }
+                } else {
+                    AI = 0;
+                }
+            }
+        }
+    }
+
+    // AJ = Total CL+Late+Perm adjusted
+    const AJ = AG + AH + AI;
+
+    // ─── SL ADJUSTED (AL) ───
+    // AL17 = IF(K>=X, Q, IF(X-K<L, Q, IF(X-K-L<AA, Q, IF(X-K-L-AA<Q, Q-(X-K-L-AA), 0))))
+    let AL;
+    if (K >= X) {
+        AL = Q;
+    } else if ((X - K) < L) {
+        AL = Q;
+    } else if ((X - K - L) < AA) {
+        AL = Q;
+    } else if ((X - K - L - AA) < Q) {
+        AL = Q - (X - K - L - AA);
+    } else {
+        AL = 0;
+    }
+
+    // ─── EL-based adjustments (AN, AO, AP) — only if V > 0 ───
+    // AN17 = IF(V>0, IF(K>X, IF(T<=(K-X), K-X-T, 0), 0), 0)
+    let AN = 0;
+    if (V > 0) {
+        if (K > X) {
+            AN = T <= (K - X) ? K - X - T : 0;
+        }
+    }
+
+    // AO17 — Late check-in remaining covered by EL
+    let AO = 0;
+    if (V > 0) {
+        if (K >= X) {
+            if (T <= (K - X)) {
+                AO = L;
+            } else {
+                AO = (T - (K - X)) <= L ? L - (T - (K - X)) : 0;
+            }
+        } else {
+            if (T <= (L - (X - K))) {
+                AO = L - (X - K) - T;
+            } else {
+                AO = 0;
+            }
+        }
+    }
+
+    // AP17 — Perm remaining covered by EL
+    let AP = 0;
+    if (V > 0) {
+        if (K >= X) {
+            if (T <= (K - X)) {
+                AP = AA;
+            } else if ((T - (K - X)) <= L) {
+                AP = AA;
+            } else {
+                let diff = T - (K - (X - L));
+                AP = diff <= AA ? AA - diff : 0;
+            }
+        } else {
+            if (T <= (L - (X - K))) {
+                AP = AA;
+            } else {
+                let diff = T - (L - (X - K));
+                AP = diff <= AA ? AA - diff : 0;
+            }
+        }
+    }
+
+    // AQ = EL utilised (from leave requests)
+    const AQ = elUtilised;
+
+    // AR = Total EL adjusted
+    const AR = AN + AO + AP + AQ;
+
+    // ─── BALANCE CARRY-FORWARD ───
+    const AT = X - AD;                          // Comp-Off Days remaining
+    const AU = Y - AE;                          // Comp-Off Hours remaining
+    const AW = T - AJ;                          // CL balance
+    const AX = U - AL;                          // SL balance
+    const AY = V - AR;                          // EL balance
+    const AZ = Y < AB ? AB - Y : 0;             // Late/Early hours remaining
+
+    // ─── LOP ───
+    // BC = IF(AW<0, |AW|, 0) + IF(AL>0, AL/2, 0) + IF(AY<0, |AY|, 0)
+    const lopDays = (AW < 0 ? Math.abs(AW) : 0) + (AL > 0 ? AL / 2 : 0) + (AY < 0 ? Math.abs(AY) : 0);
+    const status = lopDays > 0 ? 'LOP' : 'FULL';
+
+    return {
+        // Current month
+        current: {
+            compOffDays: compOffDaysCurrent,
+            compOffHours: compOffHoursCurrent,
+            clAvailed: K,
+            lateCheckIns: lateCheckInCount,
+            lateCheckInDays: L,
+            permDays: permDaysCurrent,
+            permHours: permHoursCurrent,
+            slAvailed: Q,
+            elCredited: elCredited || 0,
+            elUtilised: AQ,
+        },
+
+        // Available/Accumulated (including current month comp-off + perm)
+        available: {
+            compOffDays: X,
+            compOffHours: Y,
+            cl: T,
+            sl: U,
+            el: V,
+            permDays: AA,
+            permHours: AB,
+        },
+
+        // Adjusted (how balances are consumed)
+        adjusted: {
+            compOffDays: AD,
+            compOffHours: AE,
+            clAdjusted: AG,
+            lateAdjusted: AH,
+            permAdjusted: AI,
+            totalClAdjusted: AJ,
+            slAdjusted: AL,
+            elCl: AN,
+            elLate: AO,
+            elPerm: AP,
+            elUtilised: AQ,
+            totalElAdjusted: AR,
+        },
+
+        // Balance carry-forward
+        balance: {
+            compOffDays: AT,
+            compOffHours: AU,
+            cl: AW,
+            sl: AX,
+            el: AY,
+            permHours: AZ,
+        },
+
+        lopDays,
+        status,
+    };
+}
+
+
 // ─── DETAILS (per-employee monthly breakdown) ───
 
 // GET /api/compoff/details?month=&year=
@@ -169,10 +575,10 @@ router.get('/details', async (req, res, next) => {
         const m = parseInt(req.query.month) || (dayjs().month() + 1);
         const y = parseInt(req.query.year) || dayjs().year();
 
-        const startOfMonth = dayjs(`${y}-${m}-01`).startOf('month').toDate();
-        const endOfMonth = dayjs(`${y}-${m}-01`).endOf('month').toDate();
+        const startOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).startOf('month').toDate();
+        const endOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).endOf('month').toDate();
+        const daysInMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).daysInMonth();
 
-        // Fetch all active employees
         const employees = await prisma.employee.findMany({
             where: { tenantId: req.tenantId, status: 'active' },
             include: { contact: true, department: true, designation: true },
@@ -181,105 +587,87 @@ router.get('/details', async (req, res, next) => {
 
         const empIds = employees.map(e => e.id);
 
-        // Fetch data in parallel
         const [compOffs, permissions, leaveRequests, timesheets, prevBalances] = await Promise.all([
-            // Comp-offs for this month
-            prisma.compOff.findMany({
-                where: { tenantId: req.tenantId, month: m, year: y },
-                orderBy: { date: 'asc' },
-            }),
-            // Permission entries for this month
-            prisma.permissionEntry.findMany({
-                where: { tenantId: req.tenantId, month: m, year: y },
-                orderBy: { date: 'asc' },
-            }),
-            // Leave requests overlapping this month
+            prisma.compOff.findMany({ where: { tenantId: req.tenantId, month: m, year: y }, orderBy: { date: 'asc' } }),
+            prisma.permissionEntry.findMany({ where: { tenantId: req.tenantId, month: m, year: y }, orderBy: { date: 'asc' } }),
             prisma.leaveRequest.findMany({
                 where: {
-                    tenantId: req.tenantId,
-                    status: 'approved',
-                    startDate: { lte: endOfMonth },
-                    endDate: { gte: startOfMonth },
+                    tenantId: req.tenantId, status: 'approved',
+                    startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth },
                     employeeId: { in: empIds },
                 },
                 include: { leaveType: true },
             }),
-            // Timesheets for present count + late check-in
             prisma.timesheet.findMany({
-                where: {
-                    tenantId: req.tenantId,
-                    date: { gte: startOfMonth, lte: endOfMonth },
-                    employeeId: { in: empIds },
-                },
+                where: { tenantId: req.tenantId, date: { gte: startOfMonth, lte: endOfMonth }, employeeId: { in: empIds } },
             }),
-            // Previous month balance
             (() => {
                 const prevMonth = m === 1 ? 12 : m - 1;
                 const prevYear = m === 1 ? y - 1 : y;
-                return prisma.monthlyBalance.findMany({
-                    where: { tenantId: req.tenantId, month: prevMonth, year: prevYear },
-                });
+                return prisma.monthlyBalance.findMany({ where: { tenantId: req.tenantId, month: prevMonth, year: prevYear } });
             })(),
         ]);
 
         // Index by employee
-        const compOffByEmp = {};
-        compOffs.forEach(c => { (compOffByEmp[c.employeeId] = compOffByEmp[c.employeeId] || []).push(c); });
+        const idx = (arr) => {
+            const map = {};
+            arr.forEach(item => { (map[item.employeeId] = map[item.employeeId] || []).push(item); });
+            return map;
+        };
 
-        const permByEmp = {};
-        permissions.forEach(p => { (permByEmp[p.employeeId] = permByEmp[p.employeeId] || []).push(p); });
+        const compOffIdx = idx(compOffs);
+        const permIdx = idx(permissions);
+        const leaveIdx = idx(leaveRequests);
+        const tsIdx = idx(timesheets);
+        const prevBalIdx = {};
+        prevBalances.forEach(b => { prevBalIdx[b.employeeId] = b; });
 
-        const leaveByEmp = {};
-        leaveRequests.forEach(l => { (leaveByEmp[l.employeeId] = leaveByEmp[l.employeeId] || []).push(l); });
+        const details = employees.map((emp, i) => {
+            const ec = compOffIdx[emp.id] || [];
+            const ep = permIdx[emp.id] || [];
+            const el = leaveIdx[emp.id] || [];
+            const et = tsIdx[emp.id] || [];
+            const prevBal = prevBalIdx[emp.id] || {};
 
-        const prevBalByEmp = {};
-        prevBalances.forEach(b => { prevBalByEmp[b.employeeId] = b; });
+            // Comp-off: sum days and hours separately, then convert
+            const compOffTotalDays = ec.reduce((s, c) => s + (c.days || 0), 0);
+            const compOffTotalHours = ec.reduce((s, c) => s + (c.hours || 0), 0);
+            const compOffConverted = convertCompOffDaysHours(compOffTotalDays, compOffTotalHours);
 
-        // Count present days and late check-ins per employee
-        const timesheetByEmp = {};
-        timesheets.forEach(t => { (timesheetByEmp[t.employeeId] = timesheetByEmp[t.employeeId] || []).push(t); });
+            // CL / SL / EL from leave requests
+            const clLeaves = el.filter(l => l.leaveType?.code === 'CL' || l.leaveType?.name?.toLowerCase().includes('casual'));
+            const slLeaves = el.filter(l => l.leaveType?.code === 'SL' || l.leaveType?.name?.toLowerCase().includes('sick'));
+            const elLeaves = el.filter(l => l.leaveType?.code === 'EL' || l.leaveType?.name?.toLowerCase().includes('earned') || l.leaveType?.name?.toLowerCase().includes('vacation'));
 
-        // Build details per employee
-        const details = employees.map(emp => {
-            const empCompOffs = compOffByEmp[emp.id] || [];
-            const empPerms = permByEmp[emp.id] || [];
-            const empLeaves = leaveByEmp[emp.id] || [];
-            const empTimesheets = timesheetByEmp[emp.id] || [];
-            const prevBal = prevBalByEmp[emp.id] || {};
+            const clAvailed = clLeaves.reduce((s, l) => s + (l.days || 0), 0);
+            const slAvailed = slLeaves.reduce((s, l) => s + (l.days || 0), 0);
+            const elUtilised = elLeaves.reduce((s, l) => s + (l.days || 0), 0);
 
-            // Present days = timesheets with inAt
-            const daysPresent = empTimesheets.filter(t => t.inAt).length;
+            // SL validation
+            const slValidation = validateSlAvailed(slAvailed, prevBal.slBalance || 0);
 
-            // Late check-ins (rough: inAt exists and after 09:00 — shift-aware later)
-            const lateCheckIns = empTimesheets.filter(t => {
+            // Late check-ins
+            const lateCheckIns = et.filter(t => {
                 if (!t.inAt) return false;
-                const inHour = dayjs(t.inAt).hour();
-                const inMin = dayjs(t.inAt).minute();
-                return inHour > 9 || (inHour === 9 && inMin > 15); // after 09:15
+                const h = dayjs(t.inAt).hour();
+                const min = dayjs(t.inAt).minute();
+                return h > 9 || (h === 9 && min > 15);
             });
 
-            // Comp-off totals
-            const compOffGainedHours = empCompOffs.reduce((s, c) => s + c.hours, 0);
-            const compOffGainedDays = empCompOffs.reduce((s, c) => s + c.days, 0);
-
-            // Separate leaves by type
-            const clLeaves = empLeaves.filter(l => l.leaveType.code === 'CL' || l.leaveType.name.toLowerCase().includes('casual'));
-            const slLeaves = empLeaves.filter(l => l.leaveType.code === 'SL' || l.leaveType.name.toLowerCase().includes('sick'));
-            const elLeaves = empLeaves.filter(l => l.leaveType.code === 'EL' || l.leaveType.name.toLowerCase().includes('earned') || l.leaveType.name.toLowerCase().includes('vacation'));
-
-            const clAvailed = clLeaves.reduce((s, l) => s + l.days, 0);
-            const slAvailed = slLeaves.reduce((s, l) => s + l.days, 0);
-            const elUtilised = elLeaves.reduce((s, l) => s + l.days, 0);
-
             // Permission totals
-            const lateComingPerms = empPerms.filter(p => p.type === 'late_coming');
-            const earlyGoingPerms = empPerms.filter(p => p.type === 'early_going');
-            const generalPerms = empPerms.filter(p => p.type === 'general');
-            const totalPermHours = empPerms.reduce((s, p) => s + p.hours, 0);
-            const totalPermDays = parseFloat((totalPermHours / 8).toFixed(2));
+            const permTotalHours = ep.reduce((s, p) => s + (p.hours || 0), 0);
+            const permConverted = convertPermDaysHours(permTotalHours);
+
+            // EL credited
+            const elCredited = getElCredited(emp.leaveStartMonth, m, y, emp.category);
+
+            // Days present: Excel = EOMONTH days - LOP days (BC column)
+            // For now, count timesheets with inAt as days present
+            const daysPresent = et.filter(t => t.inAt).length;
 
             return {
                 id: emp.id,
+                slNo: i + 1,
                 name: `${emp.contact.firstName} ${emp.contact.lastName || ''}`.trim(),
                 code: emp.employeeCode,
                 designation: emp.designation?.name || '-',
@@ -289,16 +677,18 @@ router.get('/details', async (req, res, next) => {
                 daysPresent,
 
                 compOff: {
-                    entries: empCompOffs.map(c => ({
+                    entries: ec.map(c => ({
                         date: dayjs(c.date).format('DD/MM/YYYY'),
-                        hours: c.hours,
                         days: c.days,
+                        hours: c.hours,
                         reason: c.reason,
                         status: c.status,
                         uuid: c.uuid,
                     })),
-                    totalHours: compOffGainedHours,
-                    totalDays: compOffGainedDays,
+                    totalDays: compOffTotalDays,
+                    totalHours: compOffTotalHours,
+                    convertedDays: compOffConverted.days,
+                    convertedHours: compOffConverted.hours,
                 },
 
                 clAvailed: {
@@ -312,19 +702,22 @@ router.get('/details', async (req, res, next) => {
 
                 lateCheckIn: {
                     count: lateCheckIns.length,
+                    days: lateCheckInToDays(lateCheckIns.length), // 3 lates = 1 day
                     dates: lateCheckIns.map(t => dayjs(t.date).format('DD/MM/YYYY')),
                 },
 
                 permissions: {
-                    entries: empPerms.map(p => ({
+                    entries: ep.map(p => ({
                         date: dayjs(p.date).format('DD/MM/YYYY'),
                         type: p.type,
                         hours: p.hours,
                         days: p.days,
+                        remarks: p.remarks,
                         uuid: p.uuid,
                     })),
-                    totalHours: totalPermHours,
-                    totalDays: totalPermDays,
+                    totalHours: permTotalHours,
+                    convertedDays: permConverted.days,
+                    convertedHours: permConverted.hours,
                 },
 
                 slAvailed: {
@@ -334,10 +727,11 @@ router.get('/details', async (req, res, next) => {
                         days: l.days,
                     })),
                     totalDays: slAvailed,
+                    validation: slValidation,
                 },
 
                 elVacation: {
-                    credited: 0, // EL credited for this month (would come from allocation)
+                    credited: elCredited,
                     utilised: elUtilised,
                     entries: elLeaves.map(l => ({
                         startDate: dayjs(l.startDate).format('DD/MM/YYYY'),
@@ -358,11 +752,11 @@ router.get('/details', async (req, res, next) => {
             };
         });
 
-        res.json({ month: m, year: y, data: details });
+        res.json({ month: m, year: y, daysInMonth, data: details });
     } catch (error) { next(error); }
 });
 
-// ─── SUMMARY (consolidated all employees) ────────
+// ─── SUMMARY ─────────────────────────────────────
 
 // GET /api/compoff/summary?month=&year=
 router.get('/summary', async (req, res, next) => {
@@ -370,13 +764,8 @@ router.get('/summary', async (req, res, next) => {
         const m = parseInt(req.query.month) || (dayjs().month() + 1);
         const y = parseInt(req.query.year) || dayjs().year();
 
-        // Reuse the details endpoint logic
-        const detailsReq = { ...req, query: { month: m, year: y } };
-        // Instead of duplicating, we call details internally
-        // For now, compute summary from the same data
-
-        const startOfMonth = dayjs(`${y}-${m}-01`).startOf('month').toDate();
-        const endOfMonth = dayjs(`${y}-${m}-01`).endOf('month').toDate();
+        const startOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).startOf('month').toDate();
+        const endOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).endOf('month').toDate();
 
         const employees = await prisma.employee.findMany({
             where: { tenantId: req.tenantId, status: 'active' },
@@ -408,10 +797,9 @@ router.get('/summary', async (req, res, next) => {
             prisma.monthlyBalance.findMany({ where: { tenantId: req.tenantId, month: m, year: y } }),
         ]);
 
-        // Index
-        const idx = (arr, key = 'employeeId') => {
+        const idx = (arr) => {
             const map = {};
-            arr.forEach(item => { (map[item[key]] = map[item[key]] || []).push(item); });
+            arr.forEach(item => { (map[item.employeeId] = map[item.employeeId] || []).push(item); });
             return map;
         };
 
@@ -424,7 +812,7 @@ router.get('/summary', async (req, res, next) => {
         const curBalIdx = {};
         currentBalances.forEach(b => { curBalIdx[b.employeeId] = b; });
 
-        const summary = employees.map(emp => {
+        const summary = employees.map((emp, i) => {
             const ec = compOffIdx[emp.id] || [];
             const ep = permIdx[emp.id] || [];
             const el = leaveIdx[emp.id] || [];
@@ -434,87 +822,69 @@ router.get('/summary', async (req, res, next) => {
 
             const daysPresent = et.filter(t => t.inAt).length;
 
-            // Current month gains
-            const compOffGainedDays = ec.filter(c => c.status === 'approved').reduce((s, c) => s + c.days, 0);
-            const compOffGainedHours = ec.filter(c => c.status === 'approved').reduce((s, c) => s + c.hours, 0);
+            // Comp-off this month
+            const compOffTotalDays = ec.reduce((s, c) => s + (c.days || 0), 0);
+            const compOffTotalHours = ec.reduce((s, c) => s + (c.hours || 0), 0);
+            const compOffConverted = convertCompOffDaysHours(compOffTotalDays, compOffTotalHours);
 
-            const clLeaves = el.filter(l => l.leaveType.code === 'CL' || l.leaveType.name.toLowerCase().includes('casual'));
-            const slLeaves = el.filter(l => l.leaveType.code === 'SL' || l.leaveType.name.toLowerCase().includes('sick'));
-            const elLeaves = el.filter(l => l.leaveType.code === 'EL' || l.leaveType.name.toLowerCase().includes('earned') || l.leaveType.name.toLowerCase().includes('vacation'));
+            // Leaves
+            const clLeaves = el.filter(l => l.leaveType?.code === 'CL' || l.leaveType?.name?.toLowerCase().includes('casual'));
+            const slLeaves = el.filter(l => l.leaveType?.code === 'SL' || l.leaveType?.name?.toLowerCase().includes('sick'));
+            const elLeaves = el.filter(l => l.leaveType?.code === 'EL' || l.leaveType?.name?.toLowerCase().includes('earned') || l.leaveType?.name?.toLowerCase().includes('vacation'));
 
-            const clAvailed = clLeaves.reduce((s, l) => s + l.days, 0);
-            const slAvailed = slLeaves.reduce((s, l) => s + l.days, 0);
-            const elUtilised = elLeaves.reduce((s, l) => s + l.days, 0);
+            const clAvailed = clLeaves.reduce((s, l) => s + (l.days || 0), 0);
+            const slAvailed = slLeaves.reduce((s, l) => s + (l.days || 0), 0);
+            const elUtilised = elLeaves.reduce((s, l) => s + (l.days || 0), 0);
 
-            const lateCheckIns = et.filter(t => t.inAt && (dayjs(t.inAt).hour() > 9 || (dayjs(t.inAt).hour() === 9 && dayjs(t.inAt).minute() > 15))).length;
+            // Late check-ins
+            const lateCheckInCount = et.filter(t => t.inAt && (dayjs(t.inAt).hour() > 9 || (dayjs(t.inAt).hour() === 9 && dayjs(t.inAt).minute() > 15))).length;
 
-            const permHours = ep.reduce((s, p) => s + p.hours, 0);
-            const permDays = parseFloat((permHours / 8).toFixed(2));
+            // Permissions
+            const permTotalHours = ep.reduce((s, p) => s + (p.hours || 0), 0);
+            const permConverted = convertPermDaysHours(permTotalHours);
 
-            // Previous month balances
-            const prev = {
-                compOffDays: prevBal.compOffDays || 0,
-                compOffHours: prevBal.compOffHours || 0,
-                cl: prevBal.clBalance || 0,
-                sl: prevBal.slBalance || 0,
-                el: prevBal.elBalance || 0,
-                lateEarlyDays: prevBal.lateEarlyDays || 0,
-                lateEarlyHours: prevBal.lateEarlyHours || 0,
-            };
+            // EL credited
+            const elCredited = getElCredited(emp.leaveStartMonth, m, y, emp.category);
 
-            // Balance c/f = previous + gained - used
-            const balCompOffDays = prev.compOffDays + compOffGainedDays;
-            const balCompOffHours = prev.compOffHours + compOffGainedHours;
-            const balCl = prev.cl - clAvailed;
-            const balSl = prev.sl - slAvailed;
-            const balEl = prev.el - elUtilised;
-            const balLateEarlyDays = prev.lateEarlyDays + permDays;
-            const balLateEarlyHours = prev.lateEarlyHours + permHours;
+            // CL/SL: fresh allocation if this is the leave-start month, else use previous balance
+            const isLeaveStartMonth = (emp.leaveStartMonth && (
+                (m === 1 && emp.leaveStartMonth <= 1) ||   // January fresh
+                (m === 6 && emp.leaveStartMonth <= 6) ||   // June fresh
+                m === emp.leaveStartMonth
+            ));
+            const prevCl = isLeaveStartMonth ? 12 : (prevBal.clBalance || 0);
+            const prevSl = isLeaveStartMonth ? 15 : (prevBal.slBalance || 0);
 
-            // LOP: any negative leave balance
-            let lopDays = 0;
-            if (balCl < 0) lopDays += Math.abs(balCl);
-            if (balSl < 0) lopDays += Math.abs(balSl);
-
-            const status = lopDays > 0 ? 'LOP' : 'FULL';
+            // Run the full summary calculation
+            const calc = calculateSummary({
+                clAvailed,
+                lateCheckInCount,
+                slAvailed,
+                elUtilised,
+                elCredited,
+                compOffDaysCurrent: compOffConverted.days,
+                compOffHoursCurrent: compOffConverted.hours,
+                permDaysCurrent: permConverted.days,
+                permHoursCurrent: permConverted.hours,
+                prevCl,
+                prevSl,
+                prevElBalance: prevBal.elBalance || 0,
+                prevCompOffDays: prevBal.compOffDays || 0,
+                prevCompOffHours: prevBal.compOffHours || 0,
+                prevPermDays: prevBal.lateEarlyDays || 0,
+                prevPermHours: prevBal.lateEarlyHours || 0,
+            });
 
             return {
                 id: emp.id,
+                slNo: i + 1,
                 name: `${emp.contact.firstName} ${emp.contact.lastName || ''}`.trim(),
                 code: emp.employeeCode,
                 designation: emp.designation?.name || '-',
                 category: emp.category || 'confirmed',
                 leaveStartMonth: emp.leaveStartMonth,
                 daysPresent,
-
-                // Current month
-                current: {
-                    compOffDays: compOffGainedDays,
-                    compOffHours: compOffGainedHours,
-                    clAvailed,
-                    lateCheckIns,
-                    permDays,
-                    permHours,
-                    slAvailed,
-                    elUtilised,
-                },
-
-                // Previous/accumulated balance
-                previous: prev,
-
-                // Balance carry-forward
-                balance: {
-                    compOffDays: Math.max(0, balCompOffDays),
-                    compOffHours: Math.max(0, balCompOffHours),
-                    cl: Math.max(0, balCl),
-                    sl: Math.max(0, balSl),
-                    el: Math.max(0, balEl),
-                    lateEarlyDays: balLateEarlyDays,
-                    lateEarlyHours: balLateEarlyHours,
-                },
-
-                lopDays,
-                status,
+                ...calc,
                 isClosed: curBal.isClosed || false,
             };
         });
@@ -532,9 +902,11 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
         const m = parseInt(month);
         const y = parseInt(year);
 
-        // First get the summary data
-        const startOfMonth = dayjs(`${y}-${m}-01`).startOf('month').toDate();
-        const endOfMonth = dayjs(`${y}-${m}-01`).endOf('month').toDate();
+        // Get the summary for this month (reuse calculation)
+        const summaryRes = { query: { month: m, year: y }, tenantId: req.tenantId };
+
+        const startOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).startOf('month').toDate();
+        const endOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).endOf('month').toDate();
 
         const employees = await prisma.employee.findMany({
             where: { tenantId: req.tenantId, status: 'active' },
@@ -543,7 +915,7 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
         const empIds = employees.map(e => e.id);
 
         const [compOffs, permissions, leaveRequests, prevBalances] = await Promise.all([
-            prisma.compOff.findMany({ where: { tenantId: req.tenantId, month: m, year: y, status: 'approved' } }),
+            prisma.compOff.findMany({ where: { tenantId: req.tenantId, month: m, year: y } }),
             prisma.permissionEntry.findMany({ where: { tenantId: req.tenantId, month: m, year: y } }),
             prisma.leaveRequest.findMany({
                 where: {
@@ -563,39 +935,61 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
         const prevBalIdx = {};
         prevBalances.forEach(b => { prevBalIdx[b.employeeId] = b; });
 
-        // Create/Update monthly balance for each employee
+        // Calculate and store balance for each employee
         const results = await Promise.all(employees.map(async emp => {
             const ec = compOffs.filter(c => c.employeeId === emp.id);
             const ep = permissions.filter(p => p.employeeId === emp.id);
             const el = leaveRequests.filter(l => l.employeeId === emp.id);
             const prevBal = prevBalIdx[emp.id] || {};
 
-            const compOffDays = (prevBal.compOffDays || 0) + ec.reduce((s, c) => s + c.days, 0);
-            const compOffHours = (prevBal.compOffHours || 0) + ec.reduce((s, c) => s + c.hours, 0);
+            const compOffTotalDays = ec.reduce((s, c) => s + (c.days || 0), 0);
+            const compOffTotalHours = ec.reduce((s, c) => s + (c.hours || 0), 0);
+            const compOffConverted = convertCompOffDaysHours(compOffTotalDays, compOffTotalHours);
 
-            const clLeaves = el.filter(l => l.leaveType.code === 'CL' || l.leaveType.name.toLowerCase().includes('casual'));
-            const slLeaves = el.filter(l => l.leaveType.code === 'SL' || l.leaveType.name.toLowerCase().includes('sick'));
-            const elLeaves = el.filter(l => l.leaveType.code === 'EL' || l.leaveType.name.toLowerCase().includes('earned') || l.leaveType.name.toLowerCase().includes('vacation'));
+            const clLeaves = el.filter(l => l.leaveType?.code === 'CL' || l.leaveType?.name?.toLowerCase().includes('casual'));
+            const slLeaves = el.filter(l => l.leaveType?.code === 'SL' || l.leaveType?.name?.toLowerCase().includes('sick'));
+            const elLeaves = el.filter(l => l.leaveType?.code === 'EL' || l.leaveType?.name?.toLowerCase().includes('earned') || l.leaveType?.name?.toLowerCase().includes('vacation'));
 
-            const clBalance = Math.max(0, (prevBal.clBalance || 0) - clLeaves.reduce((s, l) => s + l.days, 0));
-            const slBalance = Math.max(0, (prevBal.slBalance || 0) - slLeaves.reduce((s, l) => s + l.days, 0));
-            const elBalance = Math.max(0, (prevBal.elBalance || 0) - elLeaves.reduce((s, l) => s + l.days, 0));
+            const permTotalHours = ep.reduce((s, p) => s + (p.hours || 0), 0);
+            const permConverted = convertPermDaysHours(permTotalHours);
 
-            const permHours = ep.reduce((s, p) => s + p.hours, 0);
-            const lateEarlyDays = (prevBal.lateEarlyDays || 0) + parseFloat((permHours / 8).toFixed(2));
-            const lateEarlyHours = (prevBal.lateEarlyHours || 0) + permHours;
+            const elCredited = getElCredited(emp.leaveStartMonth, m, y, emp.category);
 
-            // Negative balances become 0 for next month (per Notes rule 8)
+            const isLeaveStartMonth = emp.leaveStartMonth && (m === 1 || m === 6 || m === emp.leaveStartMonth);
+            const prevCl = isLeaveStartMonth ? 12 : (prevBal.clBalance || 0);
+            const prevSl = isLeaveStartMonth ? 15 : (prevBal.slBalance || 0);
+
+            const calc = calculateSummary({
+                clAvailed: clLeaves.reduce((s, l) => s + (l.days || 0), 0),
+                lateCheckInCount: 0, // Not needed for balance — late is already in perm
+                slAvailed: slLeaves.reduce((s, l) => s + (l.days || 0), 0),
+                elUtilised: elLeaves.reduce((s, l) => s + (l.days || 0), 0),
+                elCredited,
+                compOffDaysCurrent: compOffConverted.days,
+                compOffHoursCurrent: compOffConverted.hours,
+                permDaysCurrent: permConverted.days,
+                permHoursCurrent: permConverted.hours,
+                prevCl,
+                prevSl,
+                prevElBalance: prevBal.elBalance || 0,
+                prevCompOffDays: prevBal.compOffDays || 0,
+                prevCompOffHours: prevBal.compOffHours || 0,
+                prevPermDays: prevBal.lateEarlyDays || 0,
+                prevPermHours: prevBal.lateEarlyHours || 0,
+            });
+
+            // Negative balances → 0 for next month carry-forward (per Notes rule)
             return prisma.monthlyBalance.upsert({
                 where: { employeeId_month_year: { employeeId: emp.id, month: m, year: y } },
                 update: {
-                    compOffDays: Math.max(0, compOffDays),
-                    compOffHours: Math.max(0, compOffHours),
-                    clBalance: Math.max(0, clBalance),
-                    slBalance: Math.max(0, slBalance),
-                    elBalance: Math.max(0, elBalance),
-                    lateEarlyDays,
-                    lateEarlyHours,
+                    compOffDays: Math.max(0, calc.balance.compOffDays),
+                    compOffHours: Math.max(0, calc.balance.compOffHours),
+                    clBalance: Math.max(0, calc.balance.cl),
+                    slBalance: Math.max(0, calc.balance.sl),
+                    elBalance: Math.max(0, calc.balance.el),
+                    lateEarlyDays: Math.max(0, calc.adjusted.permAdjusted || 0),
+                    lateEarlyHours: Math.max(0, calc.balance.permHours),
+                    lopDays: calc.lopDays,
                     isClosed: true,
                 },
                 create: {
@@ -603,13 +997,14 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
                     employeeId: emp.id,
                     month: m,
                     year: y,
-                    compOffDays: Math.max(0, compOffDays),
-                    compOffHours: Math.max(0, compOffHours),
-                    clBalance: Math.max(0, clBalance),
-                    slBalance: Math.max(0, slBalance),
-                    elBalance: Math.max(0, elBalance),
-                    lateEarlyDays,
-                    lateEarlyHours,
+                    compOffDays: Math.max(0, calc.balance.compOffDays),
+                    compOffHours: Math.max(0, calc.balance.compOffHours),
+                    clBalance: Math.max(0, calc.balance.cl),
+                    slBalance: Math.max(0, calc.balance.sl),
+                    elBalance: Math.max(0, calc.balance.el),
+                    lateEarlyDays: Math.max(0, calc.adjusted.permAdjusted || 0),
+                    lateEarlyHours: Math.max(0, calc.balance.permHours),
+                    lopDays: calc.lopDays,
                     isClosed: true,
                 },
             });
