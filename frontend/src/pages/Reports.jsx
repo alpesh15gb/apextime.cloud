@@ -229,14 +229,14 @@ export default function Reports() {
                         <div key={emp.id} className="report-employee-row" style={{ marginBottom: 15, border: '2px solid #000', pageBreakInside: 'avoid' }}>
                             <div style={{ display: 'flex' }}>
                                 {/* Left Info Block */}
-                                <div style={{ width: 220, borderRight: '2px solid #000', padding: 4, fontSize: 10, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: 11 }}>{emp.name}</div>
-                                    <div style={{ marginBottom: 0 }}>Code: {emp.code}</div>
-                                    <div style={{ marginBottom: 0 }}>Dept: {emp.department}</div>
-                                    <div style={{ marginBottom: 0 }}>Desig: {emp.designation}</div>
-                                    <div style={{ marginTop: 4, borderTop: '1px solid #000', paddingTop: 2, fontSize: 9 }}>
+                                <div style={{ width: 140, borderRight: '2px solid #000', padding: '4px 6px', fontSize: 9, display: 'flex', flexDirection: 'column', justifyContent: 'center', lineHeight: 1.2 }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: 10, wordBreak: 'break-word', lineHeight: 1.1, marginBottom: 4 }}>{emp.name}</div>
+                                    <div style={{ marginBottom: 1 }}>Code: {emp.code}</div>
+                                    <div style={{ marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={emp.department}>Dept: {emp.department}</div>
+                                    <div style={{ marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={emp.designation}>Desig: {emp.designation}</div>
+                                    <div style={{ marginTop: 4, borderTop: '1px solid #000', paddingTop: 4, fontSize: 8.5 }}>
                                         <div>P: {emp.stats.present}, A: {emp.stats.absent}, WO: {emp.stats.wo}</div>
-                                        <div>Total Work: {emp.stats.totalWorkHrs}</div>
+                                        <div>Work: {emp.stats.totalWorkHrs}</div>
                                         {emp.stats.totalOtHrs && emp.stats.totalOtHrs !== '00:00' && <div>OT: {emp.stats.totalOtHrs}</div>}
                                         {emp.stats.totalLateHrs && emp.stats.totalLateHrs !== '00:00' && <div>Late: {emp.stats.totalLateHrs}</div>}
                                     </div>
