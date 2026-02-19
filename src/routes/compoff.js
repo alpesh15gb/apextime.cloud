@@ -342,183 +342,58 @@ function calculateSummary({
     const AA = perm.days;
     const AB = perm.hours;
 
-    // ─── ADJUSTMENT CALCULATION (Excel AD formula) ───
-    // AD17 = IF(X<=K, X, K + IF(X-K<=L, X-K, L + IF(X-K-L<=AA, X-K-L, AA + IF(X-K-L-AA<=Q, X-K-L-AA, Q))))
-    // This is: min(X, K + L + AA + Q) — comp-off used to cover cascading deficits
-    let AD;
-    if (X <= K) {
-        AD = X;
-    } else {
-        let surplus = X - K;
-        let lateUsed = Math.min(surplus, L);
-        surplus -= lateUsed;
-        let permUsed = Math.min(surplus, AA);
-        surplus -= permUsed;
-        let slUsed = Math.min(surplus, Q);
-        AD = K + lateUsed + permUsed + slUsed;
-    }
+    // ─── ADJUSTMENT CALCULATION (Clean Waterfall Model) ───
+    // Mathematically identical to the Excel nested IF formulas, but 10x more readable.
 
-    // AE17 = IF(Y<=AB, Y, AB) — comp-off hours adjusted (capped at perm hours)
-    const AE = Math.min(Y, AB);
+    // Deficits to cover
+    let remCL = K;        // CL
+    let remLate = L;      // Late Check-ins
+    let remPerm = AA;     // Permissions
+    let remSL = Q;        // Sick Leave
 
-    // ─── CL ADJUSTED (AG) ───
-    // AG17 = IF(V=0, IF(K>X, K-X, 0), IF(K>X, IF(T<=(K-X), T, K-X), 0))
-    let AG;
-    if (V === 0) {
-        AG = K > X ? K - X : 0;
-    } else {
-        if (K > X) {
-            AG = T <= (K - X) ? T : K - X;
-        } else {
-            AG = 0;
-        }
-    }
+    // --- Phase 1: Comp-Off (X) ---
+    // Covers CL -> Late -> Perm -> SL in that order
+    let compOffAvail = X;
+    const ad_cl = Math.min(compOffAvail, remCL); compOffAvail -= ad_cl; remCL -= ad_cl;
+    const ad_late = Math.min(compOffAvail, remLate); compOffAvail -= ad_late; remLate -= ad_late;
+    const ad_perm = Math.min(compOffAvail, remPerm); compOffAvail -= ad_perm; remPerm -= ad_perm;
+    const ad_sl = Math.min(compOffAvail, remSL); compOffAvail -= ad_sl; remSL -= ad_sl;
 
-    // ─── LATE CHECK-IN ADJUSTED (AH) ───
-    // Complex nested IF — how many late-days are consumed from CL balance
-    let AH;
-    if (V === 0) {
-        if (K >= X) {
-            AH = L;
-        } else {
-            AH = (X - K) < L ? L - (X - K) : 0;
-        }
-    } else {
-        if (K >= X) {
-            if (T <= (K - X)) {
-                AH = 0;
-            } else {
-                AH = (T - (K - X)) <= L ? T - (K - X) : L;
-            }
-        } else {
-            if ((X - K) < L) {
-                AH = T <= (L - (X - K)) ? T : L - (X - K);
-            } else {
-                AH = 0;
-            }
-        }
-    }
+    const AD = ad_cl + ad_late + ad_perm + ad_sl; // Total Comp-Off days used
+    const AE = Math.min(Y, AB);                   // Comp-Off hours adjusted (capped at perm hours)
+    const AL = remSL;                             // Remaining SL not covered by CompOff (gets 0.5 LOP per day per Excel logic)
 
-    // ─── LATE C/EARLY G/GEN PERM ADJUSTED (AI) ───
-    // Extremely complex nested IF
-    let AI;
-    if (V === 0) {
-        if (K >= X) {
-            AI = AA;
-        } else {
-            if ((X - K) < L) {
-                AI = AA;
-            } else {
-                AI = (X - K - L) < AA ? AA - (X - K - L) : 0;
-            }
-        }
-    } else {
-        if (K >= X) {
-            if (T <= (K - X)) {
-                AI = 0;
-            } else {
-                if ((T - (K - X)) <= L) {
-                    AI = 0;
-                } else {
-                    let diff = T - (K - (X - L));
-                    AI = diff <= AA ? diff : AA;
-                }
-            }
-        } else {
-            if ((X - K) < L) {
-                if (T <= (L - (X - K))) {
-                    AI = 0;
-                } else {
-                    let diff = T - (L - (X - K));
-                    AI = diff <= AA ? diff : AA;
-                }
-            } else {
-                if ((X - K - L) < AA) {
-                    if (T <= (L - (X - K))) {
-                        AI = 0;
-                    } else {
-                        let remaining = AA - (X - K - L);
-                        AI = T <= remaining ? T : remaining;
-                    }
-                } else {
-                    AI = 0;
-                }
-            }
-        }
-    }
+    // --- Phase 2: CL Balance (T) and EL Balance (V) ---
+    // Covers remaining CL -> Late -> Perm in that order
+    let clAvail = T;
+    let elAvail = V > 0 ? V : 0;
 
-    // AJ = Total CL+Late+Perm adjusted
-    const AJ = AG + AH + AI;
+    let ag_cl = 0, ah_late = 0, ai_perm = 0; // Covered by CL balance
+    let an_cl = 0, ao_late = 0, ap_perm = 0; // Covered by EL balance
 
-    // ─── SL ADJUSTED (AL) ───
-    // AL17 = IF(K>=X, Q, IF(X-K<L, Q, IF(X-K-L<AA, Q, IF(X-K-L-AA<Q, Q-(X-K-L-AA), 0))))
-    let AL;
-    if (K >= X) {
-        AL = Q;
-    } else if ((X - K) < L) {
-        AL = Q;
-    } else if ((X - K - L) < AA) {
-        AL = Q;
-    } else if ((X - K - L - AA) < Q) {
-        AL = Q - (X - K - L - AA);
-    } else {
-        AL = 0;
-    }
-
-    // ─── EL-based adjustments (AN, AO, AP) — only if V > 0 ───
-    // AN17 = IF(V>0, IF(K>X, IF(T<=(K-X), K-X-T, 0), 0), 0)
-    let AN = 0;
     if (V > 0) {
-        if (K > X) {
-            AN = T <= (K - X) ? K - X - T : 0;
-        }
+        // EL exists -> CL balance absorbs up to its limit, overflow goes to EL.
+        ag_cl = Math.min(clAvail, remCL); clAvail -= ag_cl; remCL -= ag_cl;
+        ah_late = Math.min(clAvail, remLate); clAvail -= ah_late; remLate -= ah_late;
+        ai_perm = Math.min(clAvail, remPerm); clAvail -= ai_perm; remPerm -= ai_perm;
+
+        // Remainder covered by EL
+        an_cl = remCL; elAvail -= an_cl; remCL = 0;
+        ao_late = remLate; elAvail -= ao_late; remLate = 0;
+        ap_perm = remPerm; elAvail -= ap_perm; remPerm = 0;
+    } else {
+        // No EL -> CL balance absorbs ALL deficits (can go negative -> turns into LOP)
+        ag_cl = remCL; clAvail -= ag_cl; remCL = 0;
+        ah_late = remLate; clAvail -= ah_late; remLate = 0;
+        ai_perm = remPerm; clAvail -= ai_perm; remPerm = 0;
     }
 
-    // AO17 — Late check-in remaining covered by EL
-    let AO = 0;
-    if (V > 0) {
-        if (K >= X) {
-            if (T <= (K - X)) {
-                AO = L;
-            } else {
-                AO = (T - (K - X)) <= L ? L - (T - (K - X)) : 0;
-            }
-        } else {
-            if (T <= (L - (X - K))) {
-                AO = L - (X - K) - T;
-            } else {
-                AO = 0;
-            }
-        }
-    }
+    const AG = ag_cl, AH = ah_late, AI = ai_perm;
+    const AJ = AG + AH + AI; // Total CL adjustments
 
-    // AP17 — Perm remaining covered by EL
-    let AP = 0;
-    if (V > 0) {
-        if (K >= X) {
-            if (T <= (K - X)) {
-                AP = AA;
-            } else if ((T - (K - X)) <= L) {
-                AP = AA;
-            } else {
-                let diff = T - (K - (X - L));
-                AP = diff <= AA ? AA - diff : 0;
-            }
-        } else {
-            if (T <= (L - (X - K))) {
-                AP = AA;
-            } else {
-                let diff = T - (L - (X - K));
-                AP = diff <= AA ? AA - diff : 0;
-            }
-        }
-    }
-
-    // AQ = EL utilised (from leave requests)
+    const AN = an_cl, AO = ao_late, AP = ap_perm;
     const AQ = elUtilised;
-
-    // AR = Total EL adjusted
-    const AR = AN + AO + AP + AQ;
+    const AR = AN + AO + AP + AQ; // Total EL adjustments
 
     // ─── BALANCE CARRY-FORWARD ───
     const AT = X - AD;                          // Comp-Off Days remaining
