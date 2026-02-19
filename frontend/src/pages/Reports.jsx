@@ -260,7 +260,7 @@ export default function Reports() {
                                             <tr style={{ background: '#eee', borderBottom: '1px solid #000', height: 18 }}>
                                                 <th style={{ borderRight: '1px solid #ccc', width: 45, fontSize: 8 }}>Date</th>
                                                 {Array.from({ length: monthlyData.meta.daysInMonth }, (_, i) => {
-                                                    const dateStr = `${(i + 1).toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}`;
+                                                    const dateStr = `${(i + 1).toString().padStart(2, '0')}`;
                                                     const dayOfWeek = dayjs(`${year}-${month.toString().padStart(2, '0')}-${(i + 1).toString().padStart(2, '0')}`).day();
                                                     const isSunday = dayOfWeek === 0;
                                                     return (
