@@ -381,10 +381,17 @@ export default function Reports() {
         display: block !important;
     }
 
+    @page {
+        size: landscape;
+        margin: 10mm;
+    }
+
     body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
         background: white !important;
+        margin: 0;
+        padding: 0;
     }
 
     /* Force ALL text to be black */
@@ -427,8 +434,8 @@ export default function Reports() {
     .report-employee-row th,
     .report-employee-row td {
         border-color: #000 !important;
-        padding: 1px !important;
-        font-size: 7pt !important;
+        padding: 2px !important;
+        font-size: 8pt !important;
         white-space: nowrap;
         overflow: hidden;
     }
