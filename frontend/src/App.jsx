@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
 import Departments from './pages/Departments';
+import Designations from './pages/Designations';
 import Timesheets from './pages/Timesheets';
 import Approvals from './pages/Approvals';
 import LeaveRequests from './pages/LeaveRequests';
@@ -15,6 +16,7 @@ import Announcements from './pages/Announcements';
 import Devices from './pages/Devices';
 import Tenants from './pages/Tenants';
 import Reports from './pages/Reports';
+import WorkShifts from './pages/WorkShifts';
 import './index.css';
 
 function ProtectedRoute({ children, adminOnly }) {
@@ -37,6 +39,8 @@ function AppRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="employees" element={<Employees />} />
         <Route path="departments" element={<Departments />} />
+        <Route path="designations" element={<Designations />} />
+        <Route path="work-shifts" element={<WorkShifts />} />
         <Route path="attendance" element={<Timesheets />} />
         <Route path="approvals" element={<Approvals />} />
         <Route path="leave-requests" element={<LeaveRequests />} />

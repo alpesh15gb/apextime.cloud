@@ -10,11 +10,40 @@ const formatDuration = (ms) => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
+// Map dayjs day() (0=Sun, 1=Mon...) to shift record day names
+const DAY_MAP = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+// Parse "HH:mm" to minutes since midnight
+const timeToMinutes = (t) => {
+    if (!t) return null;
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+};
+
+// Find the active shift for an employee on a specific date
+const getEmployeeShiftForDate = (empId, dateObj, shiftAssignments) => {
+    const assignments = shiftAssignments[empId];
+    if (!assignments || assignments.length === 0) return null;
+
+    const dateMs = dateObj.valueOf();
+    // Find an assignment where startDate <= date <= endDate
+    for (const assign of assignments) {
+        if (dateMs >= assign.startMs && dateMs <= assign.endMs) {
+            const dayName = DAY_MAP[dateObj.day()];
+            const dayRecord = (assign.shift.records || []).find(r => r.day === dayName);
+            return {
+                shiftName: assign.shift.name,
+                dayRecord: dayRecord || null,
+            };
+        }
+    }
+    return null;
+};
+
 // GET /api/reports/monthly
 router.get('/monthly', async (req, res, next) => {
     try {
         const { month, year, departmentId } = req.query;
-        // Default to current month if not provided
         const m = month ? parseInt(month) : dayjs().month() + 1;
         const y = year ? parseInt(year) : dayjs().year();
 
@@ -36,16 +65,41 @@ router.get('/monthly', async (req, res, next) => {
             orderBy: { employeeCode: 'asc' }
         });
 
+        const empIds = employees.map(e => e.id);
+
         // 2. Fetch Timesheets
         const timesheets = await prisma.timesheet.findMany({
             where: {
                 tenantId: req.tenantId,
                 date: { gte: startOfMonth.toDate(), lte: endOfMonth.toDate() },
-                employeeId: { in: employees.map(e => e.id) }
+                employeeId: { in: empIds }
             }
         });
 
-        // 3. Build Grid Data
+        // 3. Fetch Shift Assignments for all employees in this month range
+        const rawAssignments = await prisma.employeeWorkShift.findMany({
+            where: {
+                employeeId: { in: empIds },
+                startDate: { lte: endOfMonth.toDate() },
+                endDate: { gte: startOfMonth.toDate() },
+            },
+            include: {
+                workShift: true
+            }
+        });
+
+        // Index assignments by employeeId for fast lookup
+        const shiftAssignments = {};
+        for (const a of rawAssignments) {
+            if (!shiftAssignments[a.employeeId]) shiftAssignments[a.employeeId] = [];
+            shiftAssignments[a.employeeId].push({
+                startMs: dayjs(a.startDate).startOf('day').valueOf(),
+                endMs: dayjs(a.endDate).endOf('day').valueOf(),
+                shift: a.workShift,
+            });
+        }
+
+        // 4. Build Grid Data
         const reportData = employees.map(emp => {
             const rowData = {
                 id: emp.id,
@@ -53,54 +107,129 @@ router.get('/monthly', async (req, res, next) => {
                 code: emp.employeeCode,
                 designation: emp.designation?.name || '-',
                 department: emp.department?.name || '-',
-                days: {}, // 1: { in: '09:00', out: '18:00', status: 'P', ... }
+                days: {},
                 stats: {
                     present: 0,
                     absent: 0,
-                    wo: 0, // Weekly Off
+                    wo: 0,
                     leave: 0,
-                    totalWorkMs: 0
+                    totalWorkMs: 0,
+                    totalOtMs: 0,
+                    totalLateMs: 0,
                 }
             };
 
-            // Loop 1 to end of month
             for (let d = 1; d <= daysInMonth; d++) {
-                // Use dayjs to get date context
                 const currentDay = startOfMonth.date(d);
-                const dayOfWeek = currentDay.day(); // 0 is Sunday
+                const dayOfWeek = currentDay.day(); // 0 = Sunday
 
                 let status = 'A'; // Default Absent
-                let shift = 'GEN';
+                let shiftName = 'GEN';
                 let inTime = '';
                 let outTime = '';
                 let late = '00:00';
                 let early = '00:00';
+                let ot = '00:00';
                 let workMs = 0;
+                let lateMs = 0;
+                let otMs = 0;
 
-                // Weekend Logic (Assuming Sunday is Off)
-                if (dayOfWeek === 0) {
-                    status = 'WO';
-                    shift = 'OFF';
-                }
+                // === Resolve Shift ===
+                const empShift = getEmployeeShiftForDate(emp.id, currentDay, shiftAssignments);
 
-                // Find punch
-                // Filter timesheets in memory (efficient enough for <100 employees)
-                const record = timesheets.find(t => t.employeeId === emp.id && dayjs(t.date).date() === d);
+                if (empShift) {
+                    // Shift is assigned
+                    shiftName = empShift.shiftName;
+                    const dayRec = empShift.dayRecord;
 
-                if (record) {
-                    if (record.inAt) {
-                        inTime = dayjs(record.inAt).format('HH:mm');
-                        status = 'P'; // Present if punched in
-                    }
-                    if (record.outAt) {
-                        outTime = dayjs(record.outAt).format('HH:mm');
-                        workMs = dayjs(record.outAt).diff(dayjs(record.inAt));
+                    if (dayRec && dayRec.isOff) {
+                        // Weekly off per shift definition
+                        status = 'WO';
+                        shiftName = 'OFF';
                     }
 
-                    // Override WO if worked
-                    if (status === 'P' && shift === 'OFF') {
-                        // Worked on Off Day -> OT? 
-                        // Keep status P
+                    // Find punch
+                    const record = timesheets.find(t => t.employeeId === emp.id && dayjs(t.date).date() === d);
+
+                    if (record) {
+                        if (record.inAt) {
+                            inTime = dayjs(record.inAt).format('HH:mm');
+                            status = 'P';
+                        }
+                        if (record.outAt) {
+                            outTime = dayjs(record.outAt).format('HH:mm');
+                            workMs = dayjs(record.outAt).diff(dayjs(record.inAt));
+                        }
+
+                        // === Late / OT / Early Calculation ===
+                        if (dayRec && !dayRec.isOff) {
+                            const shiftStartMins = timeToMinutes(dayRec.startTime);
+                            const shiftEndMins = timeToMinutes(dayRec.endTime);
+                            const graceMins = dayRec.graceMins || 0;
+
+                            // Late = punchIn > (shiftStart + grace)
+                            if (record.inAt && shiftStartMins !== null) {
+                                const punchInMins = dayjs(record.inAt).hour() * 60 + dayjs(record.inAt).minute();
+                                const allowedStart = shiftStartMins + graceMins;
+                                if (punchInMins > allowedStart) {
+                                    lateMs = (punchInMins - shiftStartMins) * 60000; // Late from shift start, not from grace end
+                                    late = formatDuration(lateMs);
+                                }
+                            }
+
+                            // OT = punchOut > shiftEnd (only for non-overnight for now)
+                            if (record.outAt && shiftEndMins !== null && !dayRec.isOvernight) {
+                                const punchOutMins = dayjs(record.outAt).hour() * 60 + dayjs(record.outAt).minute();
+                                if (punchOutMins > shiftEndMins) {
+                                    otMs = (punchOutMins - shiftEndMins) * 60000;
+                                    ot = formatDuration(otMs);
+                                }
+                            }
+
+                            // Early = punchOut < shiftEnd
+                            if (record.outAt && shiftEndMins !== null && !dayRec.isOvernight) {
+                                const punchOutMins = dayjs(record.outAt).hour() * 60 + dayjs(record.outAt).minute();
+                                if (punchOutMins < shiftEndMins) {
+                                    const earlyMs = (shiftEndMins - punchOutMins) * 60000;
+                                    early = formatDuration(earlyMs);
+                                }
+                            }
+                        }
+
+                        // Worked on OFF day = OT (entire work duration is OT)
+                        if (dayRec && dayRec.isOff && record.inAt) {
+                            status = 'P'; // Override WO to P since they worked
+                            if (workMs > 0) {
+                                otMs = workMs;
+                                ot = formatDuration(otMs);
+                            }
+                        }
+                    }
+                } else {
+                    // No shift assigned — fallback: Sunday = WO, rest = GEN
+                    if (dayOfWeek === 0) {
+                        status = 'WO';
+                        shiftName = 'OFF';
+                    }
+
+                    // Find punch (same logic as before)
+                    const record = timesheets.find(t => t.employeeId === emp.id && dayjs(t.date).date() === d);
+                    if (record) {
+                        if (record.inAt) {
+                            inTime = dayjs(record.inAt).format('HH:mm');
+                            status = 'P';
+                        }
+                        if (record.outAt) {
+                            outTime = dayjs(record.outAt).format('HH:mm');
+                            workMs = dayjs(record.outAt).diff(dayjs(record.inAt));
+                        }
+                        if (status === 'P' && dayOfWeek === 0) {
+                            // Worked on Sunday without shift = OT
+                            if (workMs > 0) {
+                                otMs = workMs;
+                                ot = formatDuration(otMs);
+                            }
+                        }
                     }
                 }
 
@@ -110,19 +239,24 @@ router.get('/monthly', async (req, res, next) => {
                 else if (status === 'WO') rowData.stats.wo++;
 
                 rowData.stats.totalWorkMs += workMs;
+                rowData.stats.totalOtMs += otMs;
+                rowData.stats.totalLateMs += lateMs;
 
                 rowData.days[d] = {
                     in: inTime,
                     out: outTime,
-                    shift,
+                    shift: shiftName,
                     status,
                     late,
                     early,
+                    ot,
                     workHrs: formatDuration(workMs)
                 };
             }
 
             rowData.stats.totalWorkHrs = formatDuration(rowData.stats.totalWorkMs);
+            rowData.stats.totalOtHrs = formatDuration(rowData.stats.totalOtMs);
+            rowData.stats.totalLateHrs = formatDuration(rowData.stats.totalLateMs);
             return rowData;
         });
 
@@ -149,7 +283,6 @@ router.get('/approvals', async (req, res, next) => {
         const where = {
             tenantId: req.tenantId,
             date: { gte: start, lte: end },
-            // If status is provided, use it. Otherwise default to approved/rejected.
             status: status ? status : { in: ['approved', 'rejected', 'pending'] }
         };
 

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard, Users, Building2, Clock, CheckCircle2,
     CalendarOff, GraduationCap, UserSquare2, Megaphone,
-    HardDrive, LogOut, Settings, FileText
+    HardDrive, LogOut, Settings, FileText, Briefcase
 } from 'lucide-react';
 
 export default function Layout() {
@@ -25,11 +25,13 @@ export default function Layout() {
             section: 'People', items: [
                 { to: '/employees', icon: <Users />, label: 'Employees' },
                 { to: '/departments', icon: <Building2 />, label: 'Departments' },
+                { to: '/designations', icon: <Briefcase />, label: 'Designations' },
                 { to: '/students', icon: <UserSquare2 />, label: 'Students' },
             ]
         },
         {
             section: 'Attendance', items: [
+                { to: '/work-shifts', icon: <Clock />, label: 'Work Shifts' },
                 { to: '/attendance', icon: <Clock />, label: 'Timesheets' },
                 { to: '/approvals', icon: <CheckCircle2 />, label: 'Approvals' },
                 { to: '/leave-requests', icon: <CalendarOff />, label: 'Leave Requests' },

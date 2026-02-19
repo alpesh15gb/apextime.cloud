@@ -126,11 +126,15 @@ export default function Reports() {
             for (let i = 1; i <= monthlyData.meta.daysInMonth; i++) rowLate.push(emp.days[i]?.late || '');
             aoa.push(rowLate);
 
+            const rowOt = ['', '', '', 'OT'];
+            for (let i = 1; i <= monthlyData.meta.daysInMonth; i++) rowOt.push(emp.days[i]?.ot || '');
+            aoa.push(rowOt);
+
             const rowStatus = ['', '', '', 'Status'];
             for (let i = 1; i <= monthlyData.meta.daysInMonth; i++) rowStatus.push(emp.days[i]?.status || '');
             aoa.push(rowStatus);
 
-            const rowSum = [`Present: ${emp.stats.present}, Absent: ${emp.stats.absent}, Work: ${emp.stats.totalWorkHrs} `, '', '', ''];
+            const rowSum = [`Present: ${emp.stats.present}, Absent: ${emp.stats.absent}, Work: ${emp.stats.totalWorkHrs}, OT: ${emp.stats.totalOtHrs || '00:00'} `, '', '', ''];
             aoa.push(rowSum);
             aoa.push([]);
         });
@@ -233,6 +237,8 @@ export default function Reports() {
                                     <div style={{ marginTop: 4, borderTop: '1px solid #000', paddingTop: 2, fontSize: 9 }}>
                                         <div>P: {emp.stats.present}, A: {emp.stats.absent}, WO: {emp.stats.wo}</div>
                                         <div>Total Work: {emp.stats.totalWorkHrs}</div>
+                                        {emp.stats.totalOtHrs && emp.stats.totalOtHrs !== '00:00' && <div>OT: {emp.stats.totalOtHrs}</div>}
+                                        {emp.stats.totalLateHrs && emp.stats.totalLateHrs !== '00:00' && <div>Late: {emp.stats.totalLateHrs}</div>}
                                     </div>
                                 </div>
 
@@ -265,18 +271,23 @@ export default function Reports() {
                                         </thead>
                                         <tbody>
                                             {/* IN, OUT, Shift, Late, Status Rows ... (Same as before) */}
-                                            {['IN', 'OUT', 'Shift', 'Late', 'Status'].map((metric, rIdx) => (
+                                            {['IN', 'OUT', 'Shift', 'Late', 'OT', 'Status'].map((metric, rIdx) => (
                                                 <tr key={metric} style={{ height: 18, background: metric === 'Status' ? '#f9f9f9' : 'transparent', borderTop: metric === 'Status' ? '1px solid #ccc' : 'none' }}>
                                                     <td style={{ fontWeight: 'bold', borderRight: '1px solid #ccc', background: '#f0f0f0' }}>{metric}</td>
                                                     {Array.from({ length: monthlyData.meta.daysInMonth }, (_, i) => {
                                                         const d = i + 1;
                                                         let content = '';
-                                                        let style = { borderRight: '1px solid #ccc', fontSize: metric === 'Shift' || metric === 'Late' ? 8 : 9, background: emp.days[d]?.shift === 'OFF' ? '#ddd' : '#fff' };
+                                                        let style = { borderRight: '1px solid #ccc', fontSize: metric === 'Shift' || metric === 'Late' || metric === 'OT' ? 8 : 9, background: emp.days[d]?.shift === 'OFF' ? '#ddd' : '#fff' };
 
                                                         if (metric === 'IN') content = emp.days[d]?.in || '';
                                                         if (metric === 'OUT') content = emp.days[d]?.out || '';
                                                         if (metric === 'Shift') content = emp.days[d]?.shift || 'GEN';
                                                         if (metric === 'Late') content = (emp.days[d]?.late === '00:00') ? '' : emp.days[d]?.late;
+                                                        if (metric === 'OT') {
+                                                            content = (emp.days[d]?.ot === '00:00') ? '' : emp.days[d]?.ot;
+                                                            if (content) style.color = '#7c3aed';
+                                                            style.fontWeight = content ? 'bold' : 'normal';
+                                                        }
                                                         if (metric === 'Status') {
                                                             content = emp.days[d]?.status;
                                                             if (content === 'A') style.color = 'red';

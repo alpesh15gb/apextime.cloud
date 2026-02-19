@@ -8,6 +8,9 @@ router.get('/', async (req, res, next) => {
         const shifts = await prisma.workShift.findMany({
             where: { tenantId: req.tenantId },
             orderBy: { name: 'asc' },
+            include: {
+                _count: { select: { employeeWorkShifts: true } }
+            }
         });
         res.json(shifts);
     } catch (error) { next(error); }
@@ -17,7 +20,6 @@ router.get('/', async (req, res, next) => {
 router.post('/', requireRole('admin', 'super_admin'), async (req, res, next) => {
     try {
         const { name, records } = req.body;
-        // records = [{day: 'monday', startTime: '09:00', endTime: '18:00', isOvernight: false, isOff: false}]
         const shift = await prisma.workShift.create({
             data: { tenantId: req.tenantId, name, records: records || [] },
         });
@@ -34,6 +36,37 @@ router.put('/:uuid', requireRole('admin', 'super_admin'), async (req, res, next)
             data: { name, records, status },
         });
         res.json(shift);
+    } catch (error) { next(error); }
+});
+
+// GET /api/work-shifts/:uuid/assignments - List employees assigned to this shift
+router.get('/:uuid/assignments', async (req, res, next) => {
+    try {
+        const shift = await prisma.workShift.findUnique({ where: { uuid: req.params.uuid } });
+        if (!shift || shift.tenantId !== req.tenantId) {
+            return res.status(404).json({ error: 'Work shift not found' });
+        }
+
+        const assignments = await prisma.employeeWorkShift.findMany({
+            where: { workShiftId: shift.id },
+            include: {
+                employee: {
+                    include: { contact: true }
+                }
+            },
+            orderBy: { startDate: 'desc' }
+        });
+
+        const formatted = assignments.map(a => ({
+            id: a.id,
+            employeeId: a.employeeId,
+            employeeName: `${a.employee.contact.firstName} ${a.employee.contact.lastName || ''}`.trim(),
+            employeeCode: a.employee.employeeCode,
+            startDate: a.startDate.toISOString(),
+            endDate: a.endDate.toISOString(),
+        }));
+
+        res.json(formatted);
     } catch (error) { next(error); }
 });
 
@@ -61,6 +94,14 @@ router.post('/:uuid/assign', requireRole('admin', 'super_admin'), async (req, re
         );
 
         res.json({ message: `Assigned ${assignments.length} employees`, assignments });
+    } catch (error) { next(error); }
+});
+
+// DELETE /api/work-shifts/assignments/:id - Remove a specific assignment
+router.delete('/assignments/:id', requireRole('admin', 'super_admin'), async (req, res, next) => {
+    try {
+        await prisma.employeeWorkShift.delete({ where: { id: parseInt(req.params.id) } });
+        res.json({ message: 'Assignment removed' });
     } catch (error) { next(error); }
 });
 
