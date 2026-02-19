@@ -218,7 +218,7 @@ export default function Reports() {
                 <div className="report-container printable" style={{ background: 'white', color: 'black', padding: '20px' }}>
                     <div style={{ textAlign: 'center', marginBottom: 10 }} className="print-header">
                         <h3>Monthly Performance Report</h3>
-                        <p style={{ marginBottom: 0 }}>From: {year}-{month.toString().padStart(2, '0')}-01 To: {year}-{month.toString().padStart(2, '0')}-{monthlyData.meta.daysInMonth}</p>
+                        <p style={{ marginBottom: 0 }}>From: 01/{month.toString().padStart(2, '0')}/{year} To: {monthlyData.meta.daysInMonth}/{month.toString().padStart(2, '0')}/{year}</p>
                     </div>
 
                     {monthlyData.data.map((emp, idx) => (
@@ -240,11 +240,27 @@ export default function Reports() {
                                 <div style={{ flex: 1, overflowX: 'auto' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9, textAlign: 'center', tableLayout: 'fixed' }}>
                                         <thead>
-                                            <tr style={{ background: '#eee', borderBottom: '1px solid #000', height: 20 }}>
-                                                <th style={{ borderRight: '1px solid #ccc', width: 45 }}>Date</th>
-                                                {Array.from({ length: monthlyData.meta.daysInMonth }, (_, i) => (
-                                                    <th key={i + 1} style={{ borderRight: '1px solid #ccc' }}>{i + 1}</th>
-                                                ))}
+                                            <tr style={{ background: '#eee', borderBottom: 'none', height: 16 }}>
+                                                <th style={{ borderRight: '1px solid #ccc', width: 45, fontSize: 8 }}>Day</th>
+                                                {Array.from({ length: monthlyData.meta.daysInMonth }, (_, i) => {
+                                                    const dayOfWeek = dayjs(`${year}-${month.toString().padStart(2, '0')}-${(i + 1).toString().padStart(2, '0')}`).day();
+                                                    const dayLabels = ['SU', 'M', 'TU', 'W', 'TH', 'F', 'SA'];
+                                                    const isSunday = dayOfWeek === 0;
+                                                    return (
+                                                        <th key={`day-${i + 1}`} style={{ borderRight: '1px solid #ccc', fontSize: 7, fontWeight: isSunday ? 'bold' : 'normal', color: isSunday ? 'red' : '#333', padding: '1px 0' }}>{dayLabels[dayOfWeek]}</th>
+                                                    );
+                                                })}
+                                            </tr>
+                                            <tr style={{ background: '#eee', borderBottom: '1px solid #000', height: 18 }}>
+                                                <th style={{ borderRight: '1px solid #ccc', width: 45, fontSize: 8 }}>Date</th>
+                                                {Array.from({ length: monthlyData.meta.daysInMonth }, (_, i) => {
+                                                    const dateStr = `${(i + 1).toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}`;
+                                                    const dayOfWeek = dayjs(`${year}-${month.toString().padStart(2, '0')}-${(i + 1).toString().padStart(2, '0')}`).day();
+                                                    const isSunday = dayOfWeek === 0;
+                                                    return (
+                                                        <th key={i + 1} style={{ borderRight: '1px solid #ccc', fontSize: 7, color: isSunday ? 'red' : '#000', padding: '1px 0' }}>{dateStr}</th>
+                                                    );
+                                                })}
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -343,41 +359,72 @@ export default function Reports() {
 
             <style>{`
 @media print {
-    @page { size: landscape; margin: 5mm; }
+    @page { size: landscape; margin: 3mm; }
 
     /* CRITICAL: Reset main layout scrolling to allow full page printing */
-    html, body, #root, .app - layout, .main - content, .content - area {
-        height: auto!important;
-        min - height: auto!important;
-        overflow: visible!important;
-        overflow - y: visible!important;
-        display: block!important;
+    html, body, #root, .app-layout, .main-content, .content-area {
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        overflow-y: visible !important;
+        display: block !important;
     }
 
-                    body { -webkit - print - color - adjust: exact; print - color - adjust: exact; background: white!important; }
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        background: white !important;
+    }
 
-                    /* Force ALL text to be black */
-                    .printable, .printable * {
+    /* Force ALL text to be black */
+    .printable, .printable * {
         color: #000 !important;
-        background- color: transparent; /* Reset backgrounds */
+        background-color: transparent;
+    }
+
+    /* Re-apply specific backgrounds for visual cues */
+    .printable td[style*="#ddd"] { background-color: #ddd !important; }
+    .printable td[style*="#f0f0f0"] { background-color: #f0f0f0 !important; }
+    .printable th[style*="#eee"] { background-color: #eee !important; }
+    .printable tr[style*="#eee"] { background-color: #eee !important; }
+
+    .no-print { display: none !important; }
+    .sidebar, .top-bar { display: none !important; }
+
+    .printable {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Scale down to fit on paper without shrinking dates */
+    .report-container {
+        padding: 5px !important;
+    }
+
+    .report-employee-row {
+        border: 1px solid #000 !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    /* Make table fit properly on paper */
+    .report-employee-row table {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    .report-employee-row th,
+    .report-employee-row td {
+        border-color: #000 !important;
+        padding: 1px !important;
+        font-size: 7pt !important;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    h3 { margin-top: 0; font-size: 14pt; }
+    .print-header p { font-size: 10pt; }
 }
-
-                    /* Re-apply specific backgrounds for visual cues */
-                    .printable td[style *= "#ddd"] { background - color: #ddd!important; }
-                    .printable td[style *= "#f0f0f0"] { background - color: #f0f0f0!important; }
-                    .printable th[style *= "#eee"] { background - color: #eee!important; }
-
-                    .no - print { display: none!important; }
-                    
-                    .sidebar, .top - bar { display: none!important; }
-                    
-                    .printable { width: 100 %; max - width: 100 %; }
-                    h3 { margin - top: 0; }
-
-                    /* Sharpen borders */
-                    .report - employee - row { border: 1px solid #000!important; break-inside: avoid; page -break-inside: avoid; }
-th, td { border - color: #000!important; }
-                }
 `}</style>
         </div>
     );
