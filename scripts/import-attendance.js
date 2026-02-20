@@ -133,7 +133,8 @@ async function main() {
         }
 
         if (punchDate.isValid()) {
-            const dateOnly = punchDate.startOf('day').toDate();
+            // Create a proper UTC midnight date to avoid timezone shifts
+            const dateOnly = new Date(Date.UTC(punchDate.year(), punchDate.month(), punchDate.date()));
             const punchTime = punchDate.toDate();
 
             // Find Timesheet

@@ -328,4 +328,52 @@ router.get('/approvals', async (req, res, next) => {
     } catch (error) { next(error); }
 });
 
+// GET /api/reports/fix-timezone-dates (Temporary Data Fix)
+router.get('/fix-timezone-dates', async (req, res, next) => {
+    try {
+        console.log('Starting migration to fix shifted timezone dates for imported attendance...');
+
+        // Fetch all timesheets from uploads
+        const timesheets = await prisma.timesheet.findMany({
+            where: {
+                source: 'upload'
+            }
+        });
+
+        console.log(`Found ${timesheets.length} uploaded timesheet records.`);
+
+        let updated = 0;
+
+        for (const ts of timesheets) {
+            if (!ts.inAt) continue; // Safety check
+
+            const currentDbDate = dayjs(ts.date).format('YYYY-MM-DD');
+
+            // Let's create the correct intended date from the actual punch time (inAt)
+            const punchDayjs = dayjs(ts.inAt);
+
+            // Because of the timezone issue, we need to extract year/month/date in local time
+            // and create a UTC midnight date for it.
+            const intendedDate = new Date(Date.UTC(punchDayjs.year(), punchDayjs.month(), punchDayjs.date()));
+
+            const intendedDbDate = dayjs(intendedDate).format('YYYY-MM-DD');
+
+            // Check if the date is shifted. The actual inAt day of month should match the date column's day of month
+            if (currentDbDate !== intendedDbDate) {
+                console.log(`[Fixing Shift] Employee: ${ts.employeeId} | Old Date: ${currentDbDate} -> New Date: ${intendedDbDate}`);
+
+                await prisma.timesheet.update({
+                    where: { id: ts.id },
+                    data: {
+                        date: intendedDate
+                    }
+                });
+                updated++;
+            }
+        }
+
+        res.json({ message: `Migration complete! Fixed ${updated} out of ${timesheets.length} uploaded timesheet records.` });
+    } catch (error) { next(error); }
+});
+
 module.exports = router;
