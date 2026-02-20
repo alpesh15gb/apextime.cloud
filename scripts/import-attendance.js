@@ -163,15 +163,27 @@ async function main() {
                 let newIn = timesheet.inAt;
                 let newOut = timesheet.outAt;
 
-                if (!newIn || dayjs(punchTime).isBefore(dayjs(newIn))) {
-                    newIn = punchTime;
-                }
+                const punchDayjs = dayjs(punchTime);
 
-                // If this punch is AFTER inAt, checking if it is the new "Out"
-                // Only if punchTime > newIn (avoid same minute issues)
-                if (newIn && dayjs(punchTime).isAfter(dayjs(newIn))) {
-                    if (!newOut || dayjs(punchTime).isAfter(dayjs(newOut))) {
-                        newOut = punchTime;
+                if (!newIn) {
+                    newIn = punchTime;
+                } else {
+                    const existingInDayjs = dayjs(newIn);
+
+                    if (punchDayjs.isBefore(existingInDayjs)) {
+                        // The new punch is EARLIER than the CURRENT minimum.
+                        // We must save the old minimum as an Out time (if it's later than current Out time)
+                        if (!newOut || existingInDayjs.isAfter(dayjs(newOut))) {
+                            newOut = newIn;
+                        }
+                        // Now safely overwrite the minimum
+                        newIn = punchTime;
+                    } else if (punchDayjs.isAfter(existingInDayjs)) {
+                        // The new punch is LATER than the CURRENT minimum.
+                        // Check if it's also later than the current maximum
+                        if (!newOut || punchDayjs.isAfter(dayjs(newOut))) {
+                            newOut = punchTime;
+                        }
                     }
                 }
 
