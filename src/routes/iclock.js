@@ -190,48 +190,58 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
                     if (employee) {
                         const dateStr = dayjs(punchTime).format('YYYY-MM-DD');
 
-                        // Check for existing open timesheet
+                        // Check for existing timesheet for the day
                         const existingTimesheet = await prisma.timesheet.findFirst({
                             where: {
                                 employeeId: employee.id,
-                                date: new Date(dateStr),
-                                outAt: null,
+                                date: new Date(dateStr)
                             },
-                            orderBy: { inAt: 'desc' },
                         });
 
                         if (existingTimesheet) {
-                            // Clock out — only if > 2 min difference
-                            const diff = dayjs(punchTime).diff(dayjs(existingTimesheet.inAt), 'minute');
-                            if (diff >= 2) {
-                                await prisma.timesheet.update({
-                                    where: { id: existingTimesheet.id },
-                                    data: { outAt: punchTime },
-                                });
+                            // Timesheet exists. Check if this punch is an "Out" punch (later than "In")
+                            const diffMinutes = dayjs(punchTime).diff(dayjs(existingTimesheet.inAt), 'minute');
+
+                            if (diffMinutes >= 2) {
+                                // Only update outAt if the new punch is later than the currently saved outAt (or if there is no outAt yet)
+                                if (!existingTimesheet.outAt || dayjs(punchTime).isAfter(dayjs(existingTimesheet.outAt))) {
+                                    await prisma.timesheet.update({
+                                        where: { id: existingTimesheet.id },
+                                        data: { outAt: punchTime },
+                                    });
+                                }
+                            } else if (diffMinutes < 0) {
+                                // Extremely rare edge case: punchTime is somehow EARLIER than inAt 
+                                // (e.g., ADMS sent logs out of order). We should shift the old inAt to outAt, 
+                                // and make this punch the new inAt.
+                                if (!existingTimesheet.outAt || dayjs(existingTimesheet.inAt).isAfter(dayjs(existingTimesheet.outAt))) {
+                                    await prisma.timesheet.update({
+                                        where: { id: existingTimesheet.id },
+                                        data: {
+                                            inAt: punchTime,
+                                            outAt: existingTimesheet.inAt
+                                        },
+                                    });
+                                } else {
+                                    await prisma.timesheet.update({
+                                        where: { id: existingTimesheet.id },
+                                        data: { inAt: punchTime },
+                                    });
+                                }
                             }
                         } else {
-                            // Check if timesheet already exists for this punch (prevent duplicates)
-                            const duplicateSheet = await prisma.timesheet.findFirst({
-                                where: {
+                            // First punch of the day: Clock in
+                            await prisma.timesheet.create({
+                                data: {
+                                    tenantId: device.tenantId,
                                     employeeId: employee.id,
+                                    date: new Date(dateStr),
                                     inAt: punchTime,
+                                    source: 'device',
+                                    status: 'auto_approved',
+                                    meta: { device_sn: SN, verify_mode: verifyMode, in_out_mode: inOutMode },
                                 },
                             });
-
-                            if (!duplicateSheet) {
-                                // Clock in
-                                await prisma.timesheet.create({
-                                    data: {
-                                        tenantId: device.tenantId,
-                                        employeeId: employee.id,
-                                        date: new Date(dateStr),
-                                        inAt: punchTime,
-                                        source: 'device',
-                                        status: 'auto_approved',
-                                        meta: { device_sn: SN, verify_mode: verifyMode, in_out_mode: inOutMode },
-                                    },
-                                });
-                            }
                         }
 
                         // Mark log as processed
