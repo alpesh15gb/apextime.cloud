@@ -758,33 +758,37 @@ export default function CompOff() {
                         background-color: #e5e7eb !important;
                         font-weight: 700 !important;
                     }
-                    /* Available / Accumulated columns (13–17) — green tint */
+                    /* Available / Accumulated columns (13–17) — light grey */
                     .data-table td:nth-child(n+13):nth-child(-n+17) {
-                        background-color: #d1fae5 !important;
-                        color: #065f46 !important;
+                        background-color: #e5e7eb !important;
+                        color: #000 !important;
                     }
-                    /* Balance C/F columns (18–22) — amber tint */
+                    /* Balance C/F columns (18–22) — slightly darker grey */
                     .data-table td:nth-child(n+18):nth-child(-n+22) {
-                        background-color: #fef3c7 !important;
-                        color: #92400e !important;
+                        background-color: #d1d5db !important;
+                        color: #000 !important;
+                        font-weight: 700 !important;
                     }
                     /* LOP column (23) */
                     .data-table td:nth-child(23) {
-                        color: #b91c1c !important;
                         font-weight: 700 !important;
                     }
-                    /* Status badges */
+                    /* FULL badge — outline style */
                     .badge-success {
-                        background-color: #22c55e !important;
-                        color: #fff !important;
-                        padding: 1px 5px !important;
-                        border-radius: 10px !important;
+                        background-color: #fff !important;
+                        color: #000 !important;
+                        border: 1.5px solid #000 !important;
+                        padding: 1px 4px !important;
+                        border-radius: 3px !important;
+                        font-weight: 700 !important;
                     }
+                    /* LOP badge — solid black */
                     .badge-danger {
-                        background-color: #ef4444 !important;
+                        background-color: #000 !important;
                         color: #fff !important;
-                        padding: 1px 5px !important;
-                        border-radius: 10px !important;
+                        padding: 1px 4px !important;
+                        border-radius: 3px !important;
+                        font-weight: 700 !important;
                     }
 
                     /* Print header above table */
