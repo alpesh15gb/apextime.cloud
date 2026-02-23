@@ -182,7 +182,7 @@ export default function CompOff() {
     const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
     const filteredDetails = detailsData?.data?.filter(emp =>
-        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || emp.code?.toLowerCase().includes(searchTerm.toLowerCase())
+        (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || emp.code?.toLowerCase().includes(searchTerm.toLowerCase())
     ) || [];
 
     const getInitials = (name) => name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -488,11 +488,11 @@ export default function CompOff() {
                             </tr>
                         </thead>
                         <tbody>
-                            {(summaryData.data || []).filter(e => e.name.toLowerCase().includes(searchTerm.toLowerCase())).map((e, idx) => (
+                            {(summaryData.data || []).filter(e => (e.name || '').toLowerCase().includes(searchTerm.toLowerCase())).map((e, idx) => (
                                 <tr key={e.id}>
                                     <td style={{ padding: '8px 6px', textAlign: 'center' }}>{idx + 1}</td>
                                     <td style={{ padding: '8px 6px', fontWeight: 600, fontSize: 12 }}>{e.name}</td>
-                                    <td style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 11 }}>{e.designation}</td>
+                                    <td style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 11 }}>{e.designation || '-'}</td>
                                     <td style={{ padding: '8px 6px', textAlign: 'center' }}>
                                         <span style={{
                                             padding: '1px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600,

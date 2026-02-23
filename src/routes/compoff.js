@@ -1060,8 +1060,7 @@ router.post('/set-initial-balance', requireRole('admin', 'super_admin'), async (
 
         const balance = await prisma.monthlyBalance.upsert({
             where: {
-                tenantId_employeeId_month_year: {
-                    tenantId: req.tenantId,
+                employeeId_month_year: {
                     employeeId: parseInt(employeeId),
                     month: m,
                     year: y,
@@ -1114,7 +1113,7 @@ router.post('/bulk-set-initial-balance', requireRole('admin', 'super_admin'), as
         let updated = 0;
         for (const emp of employees) {
             const existing = await prisma.monthlyBalance.findUnique({
-                where: { tenantId_employeeId_month_year: { tenantId: req.tenantId, employeeId: emp.id, month: m, year: y } },
+                where: { employeeId_month_year: { employeeId: emp.id, month: m, year: y } },
             });
 
             if (existing) {
