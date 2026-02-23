@@ -182,10 +182,10 @@ export default function CompOff() {
     const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
     const filteredDetails = detailsData?.data?.filter(emp =>
-        (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || emp.code?.toLowerCase().includes(searchTerm.toLowerCase())
+        (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (emp.code || '').toLowerCase().includes(searchTerm.toLowerCase())
     ) || [];
 
-    const getInitials = (name) => name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    const getInitials = (name) => (name || '?').split(' ').map(n => n[0] || '').join('').slice(0, 2).toUpperCase() || '?';
 
     return (
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
