@@ -731,6 +731,11 @@ export default function CompOff() {
                         border-collapse: collapse !important;
                         table-layout: auto !important;
                     }
+                    .data-table, .data-table th, .data-table td, .badge {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
                     .data-table th, .data-table td {
                         color: black !important;
                         border: 1px solid #aaa !important;
@@ -750,10 +755,36 @@ export default function CompOff() {
                         min-width: 50px !important;
                     }
                     .data-table th {
-                        background-color: #efefef !important;
+                        background-color: #e5e7eb !important;
                         font-weight: 700 !important;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                    }
+                    /* Available / Accumulated columns (13–17) — green tint */
+                    .data-table td:nth-child(n+13):nth-child(-n+17) {
+                        background-color: #d1fae5 !important;
+                        color: #065f46 !important;
+                    }
+                    /* Balance C/F columns (18–22) — amber tint */
+                    .data-table td:nth-child(n+18):nth-child(-n+22) {
+                        background-color: #fef3c7 !important;
+                        color: #92400e !important;
+                    }
+                    /* LOP column (23) */
+                    .data-table td:nth-child(23) {
+                        color: #b91c1c !important;
+                        font-weight: 700 !important;
+                    }
+                    /* Status badges */
+                    .badge-success {
+                        background-color: #22c55e !important;
+                        color: #fff !important;
+                        padding: 1px 5px !important;
+                        border-radius: 10px !important;
+                    }
+                    .badge-danger {
+                        background-color: #ef4444 !important;
+                        color: #fff !important;
+                        padding: 1px 5px !important;
+                        border-radius: 10px !important;
                     }
 
                     /* Print header above table */
