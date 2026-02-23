@@ -755,16 +755,7 @@ export default function CompOff() {
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
-                    span[style*="background"] {
-                        background: none !important;
-                        color: black !important;
-                        border: 1px solid #555;
-                        padding: 1px 3px;
-                    }
-                    td[style*="background"] {
-                        background: none !important;
-                        color: black !important;
-                    }
+
                     /* Print header above table */
                     .print-title { display: block !important; font-size: 11pt; font-weight: 700; text-align: center; margin-bottom: 6px; }
                 }
