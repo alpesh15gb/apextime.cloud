@@ -727,17 +727,27 @@ export default function CompOff() {
                     }
                     .data-table {
                         width: 100% !important;
-                        font-size: 7pt !important;
+                        font-size: 6.5pt !important;
                         border-collapse: collapse !important;
-                        table-layout: fixed !important;
+                        table-layout: auto !important;
                     }
                     .data-table th, .data-table td {
                         color: black !important;
                         border: 1px solid #aaa !important;
-                        padding: 3px 2px !important;
+                        padding: 2px 2px !important;
                         white-space: normal !important;
-                        word-break: break-word !important;
-                        overflow: hidden !important;
+                        word-break: normal !important;
+                        overflow-wrap: anywhere !important;
+                        overflow: visible !important;
+                    }
+                    /* Name column — always enough room */
+                    .data-table td:nth-child(2), .data-table th:nth-child(2) {
+                        min-width: 65px !important;
+                        word-break: normal !important;
+                    }
+                    /* Designation column */
+                    .data-table td:nth-child(3), .data-table th:nth-child(3) {
+                        min-width: 50px !important;
                     }
                     .data-table th {
                         background-color: #efefef !important;
