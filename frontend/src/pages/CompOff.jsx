@@ -83,79 +83,99 @@ export default function CompOff() {
 
     const exportSummaryExcel = () => {
         if (!summaryData?.data) return;
-        const ws = XLSX.utils.aoa_to_sheet([
-            [
-                'Sl. No', 'Name / Employee Code', 'Designation', 'Category', 'Days Present',
-                'Current Month', null, null, null, null, null,
-                'Available / Accumulated', null, null, null, null,
-                'Balance C/F', null, null, null, null,
-                'LOP/Status', null
-            ],
-            [
-                null, null, null, null, null,
-                // Current
-                'Comp-Off', 'CL', 'Late', 'Perm', 'SL', 'EL',
-                // Available
-                'Comp-Off', 'CL', 'SL', 'EL', 'Perm',
-                // Balance
-                'Comp-Off', 'CL', 'SL', 'EL', 'Perm',
-                // Status
-                'LOP Days', 'Status'
-            ],
-            ...summaryData.data.map((e, i) => [
-                i + 1,
-                `${e.name}\n${e.code}`,
-                e.designation,
-                CAT_LABELS[e.category] || e.category,
-                e.daysPresent,
-                // Current
-                e.current?.compOffDays || '-',
-                e.current?.clAvailed || '-',
-                e.current?.lateCheckIns ? `${e.current.lateCheckIns}→${e.current.lateCheckInDays}d` : '-',
-                e.current?.permDays || '-',
-                e.current?.slAvailed || '-',
-                e.current?.elUtilised || '-',
-                // Available
-                e.available?.compOffDays || '-',
-                e.available?.cl || '-',
-                e.available?.sl || '-',
-                e.available?.el || '-',
-                e.available?.permDays || '-',
-                // Balance
-                e.balance?.compOffDays ?? 0,
-                e.balance?.cl ?? 0,
-                e.balance?.sl ?? 0,
-                e.balance?.el ?? 0,
-                e.balance?.permHours ?? 0,
-                // Status
-                e.lopDays || 0,
-                e.status
-            ])
+        const monthName = MONTHS[month - 1];
+
+        // Row 0: Title
+        // Row 1: Section headers (with rowspan/colspan via merges)
+        // Row 2: Sub-column headers
+        // Row 3+: Data
+        const titleRow = [`Comp-Off & Leave Summary — ${monthName} ${year}`, ...Array(23).fill(null)];
+        const headerRow1 = [
+            'Sl.', 'Name', 'Designation', 'Category', 'Days\nPresent',
+            'CURRENT MONTH', null, null, null, null, null, null,
+            'AVAILABLE / ACCUMULATED', null, null, null, null,
+            'BALANCE C/F', null, null, null, null,
+            'STATUS', null,
+        ];
+        const headerRow2 = [
+            null, null, null, null, null,
+            'CO.d', 'CO.h', 'CL', 'Late', 'L/E/G', 'SL', 'EL',
+            'CO', 'CL', 'SL', 'EL', 'Perm',
+            'CO', 'CL', 'SL', 'EL', 'L/E.h',
+            'LOP Days', 'Status',
+        ];
+
+        const dataRows = summaryData.data.map((e, i) => [
+            i + 1,
+            `${e.name}${e.code ? ' (' + e.code + ')' : ''}`,
+            e.designation || '-',
+            CAT_LABELS[e.category] || e.category,
+            e.daysPresent,
+            // Current Month
+            e.current?.compOffDays || '-',
+            e.current?.compOffHours || '-',
+            e.current?.clAvailed || '-',
+            e.current?.lateCheckIns ? `${e.current.lateCheckIns}→${e.current.lateCheckInDays}d` : '-',
+            e.current?.permDays || '-',
+            e.current?.slAvailed || '-',
+            e.current?.elUtilised || '-',
+            // Available / Accumulated
+            e.available?.compOffDays || '-',
+            e.available?.cl || '-',
+            e.available?.sl || '-',
+            e.available?.el || '-',
+            e.available?.permDays || '-',
+            // Balance C/F
+            e.balance?.compOffDays ?? 0,
+            e.balance?.cl ?? 0,
+            e.balance?.sl ?? 0,
+            e.balance?.el ?? 0,
+            e.balance?.permHours ?? 0,
+            // Status
+            e.lopDays || 0,
+            e.status,
         ]);
 
+        const ws = XLSX.utils.aoa_to_sheet([titleRow, headerRow1, headerRow2, ...dataRows]);
+
         ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
-            { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
-            { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
-            { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } },
-            { s: { r: 0, c: 4 }, e: { r: 1, c: 4 } },
-            { s: { r: 0, c: 5 }, e: { r: 0, c: 10 } }, // Current
-            { s: { r: 0, c: 11 }, e: { r: 0, c: 15 } }, // Available
-            { s: { r: 0, c: 16 }, e: { r: 0, c: 20 } }, // Balance
-            { s: { r: 0, c: 21 }, e: { r: 0, c: 22 } }, // LOP Status
+            // Title spans all 24 cols
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 23 } },
+            // Fixed cols span rows 1+2
+            { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
+            { s: { r: 1, c: 1 }, e: { r: 2, c: 1 } },
+            { s: { r: 1, c: 2 }, e: { r: 2, c: 2 } },
+            { s: { r: 1, c: 3 }, e: { r: 2, c: 3 } },
+            { s: { r: 1, c: 4 }, e: { r: 2, c: 4 } },
+            // Section group headers
+            { s: { r: 1, c: 5 },  e: { r: 1, c: 11 } }, // Current Month  (7 cols: CO.d CO.h CL Late L/E/G SL EL)
+            { s: { r: 1, c: 12 }, e: { r: 1, c: 16 } }, // Available      (5 cols: CO CL SL EL Perm)
+            { s: { r: 1, c: 17 }, e: { r: 1, c: 21 } }, // Balance C/F    (5 cols: CO CL SL EL L/E.h)
+            { s: { r: 1, c: 22 }, e: { r: 1, c: 23 } }, // Status         (2 cols: LOP Status)
         ];
 
         ws['!cols'] = [
-            { wch: 6 }, { wch: 25 }, { wch: 18 }, { wch: 12 }, { wch: 12 },
-            { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
-            { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
-            { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
-            { wch: 10 }, { wch: 10 }
+            { wch: 5 },  // Sl
+            { wch: 24 }, // Name
+            { wch: 16 }, // Designation
+            { wch: 11 }, // Category
+            { wch: 7 },  // Days Present
+            // Current Month (7)
+            { wch: 7 }, { wch: 7 }, { wch: 6 }, { wch: 10 }, { wch: 7 }, { wch: 6 }, { wch: 6 },
+            // Available (5)
+            { wch: 7 }, { wch: 6 }, { wch: 6 }, { wch: 8 }, { wch: 7 },
+            // Balance (5)
+            { wch: 7 }, { wch: 6 }, { wch: 6 }, { wch: 8 }, { wch: 7 },
+            // Status (2)
+            { wch: 9 }, { wch: 8 },
         ];
+
+        // Row heights: title taller, header rows slightly taller
+        ws['!rows'] = [{ hpt: 20 }, { hpt: 18 }, { hpt: 16 }];
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Summary');
-        XLSX.writeFile(wb, `CompOff_Summary_${MONTHS[month - 1]}_${year}.xlsx`);
+        XLSX.writeFile(wb, `CompOff_Summary_${monthName}_${year}.xlsx`);
     };
 
     const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
@@ -431,6 +451,7 @@ export default function CompOff() {
             {/* ═════════ SUMMARY TAB ═════════ */}
             {!loading && activeTab === 'summary' && summaryData && (
                 <div className="card" style={{ overflow: 'auto' }}>
+                <div className="print-title">Comp-Off &amp; Leave Summary — {MONTHS[month - 1]} {year}</div>
                     <table className="data-table" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
                         <thead>
                             <tr>
@@ -682,17 +703,62 @@ export default function CompOff() {
 
             {/* ───── PRINT STYLES ───── */}
             <style>{`
+                @page {
+                    size: A4 landscape;
+                    margin: 6mm 8mm;
+                }
                 @media print {
-                    body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
+                    html, body {
+                        width: 100%;
+                        background: white !important;
+                        color: black !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
                     .sidebar, .navbar, .print-hide { display: none !important; }
                     .main-content { margin: 0 !important; padding: 0 !important; }
-                    .data-table { width: 100% !important; font-size: 8pt !important; border: 1px solid #000 !important; }
-                    .data-table th, .data-table td { color: black !important; border-color: #000 !important; padding: 4px !important; }
-                    .data-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
-                    span[style*="background"] { background: none !important; color: black !important; border: 1px solid #000; }
-                    td[style*="background"] { background: none !important; color: black !important; border-left: 2px solid #000 !important; border-right: 2px solid #000 !important; }
+                    .card {
+                        box-shadow: none !important;
+                        border: none !important;
+                        padding: 0 !important;
+                        overflow: visible !important;
+                    }
+                    .data-table {
+                        width: 100% !important;
+                        font-size: 7pt !important;
+                        border-collapse: collapse !important;
+                        table-layout: fixed !important;
+                    }
+                    .data-table th, .data-table td {
+                        color: black !important;
+                        border: 1px solid #aaa !important;
+                        padding: 3px 2px !important;
+                        white-space: normal !important;
+                        word-break: break-word !important;
+                        overflow: hidden !important;
+                    }
+                    .data-table th {
+                        background-color: #efefef !important;
+                        font-weight: 700 !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    span[style*="background"] {
+                        background: none !important;
+                        color: black !important;
+                        border: 1px solid #555;
+                        padding: 1px 3px;
+                    }
+                    td[style*="background"] {
+                        background: none !important;
+                        color: black !important;
+                    }
+                    /* Print header above table */
+                    .print-title { display: block !important; font-size: 11pt; font-weight: 700; text-align: center; margin-bottom: 6px; }
                 }
+                .print-title { display: none; }
             `}</style>
         </div>
     );

@@ -245,19 +245,30 @@ function lateCheckInToDays(lateCount) {
  * Each employee has their own leave-start month; EL is credited in Jan and June (or their specific month)
  */
 function getElCredited(leaveStartMonth, currentMonth, currentYear, category) {
-    // standard: 15 days credited in Jan and June for most categories
-    // Different allocations per category can be configured here
+    // EL is credited in January and June only (company standard).
+    // leaveStartMonth does NOT affect EL credit — it only affects CL/SL reset.
     const creditMonths = [1, 6]; // January and June
-    if (!leaveStartMonth) return 0;
-    if (currentMonth === leaveStartMonth || creditMonths.includes(currentMonth)) {
-        // Confirmed/Time-Scale: 15; Contract: 15; Part-time/Adhoc: varies
-        if (category === 'confirmed' || category === 'time_scale') return 15;
-        if (category === 'contract') return 15;
-        if (category === 'adhoc') return 10;
-        if (category === 'part_time') return 8;
-        return 15;
-    }
-    return 0;
+    if (!creditMonths.includes(currentMonth)) return 0;
+    // Adhoc employees do not receive EL credit
+    if (category === 'adhoc') return 0;
+    if (category === 'confirmed' || category === 'time_scale') return 15;
+    if (category === 'contract') return 15;
+    if (category === 'part_time') return 8;
+    return 15;
+}
+
+/**
+ * Fresh CL/SL allocation on an employee's leave-start month.
+ * Excel: T=IF($E$3="[leaveStartMonth]", 12/8, prevBalance)
+ *   Confirmed/Time-Scale → 12 CL, 15 SL
+ *   Contract            →  8 CL,  8 SL
+ *   Adhoc               → no reset (carry forward only)
+ * Returns null for categories that do not get a fresh reset.
+ */
+function getFreshLeaveAllocation(category) {
+    if (category === 'confirmed' || category === 'time_scale') return { cl: 12, sl: 15 };
+    if (category === 'contract') return { cl: 8, sl: 8 };
+    return null; // Adhoc and others: no fresh reset
 }
 
 /**
@@ -542,9 +553,10 @@ router.get('/details', async (req, res, next) => {
             const et = tsIdx[emp.id] || [];
             const prevBal = prevBalIdx[emp.id] || {};
 
-            // Comp-off: sum days and hours separately, then convert
-            const compOffTotalDays = ec.reduce((s, c) => s + (c.days || 0), 0);
-            const compOffTotalHours = ec.reduce((s, c) => s + (c.hours || 0), 0);
+            // Comp-off: only approved entries count toward the balance
+            const approvedEc = ec.filter(c => c.status === 'approved');
+            const compOffTotalDays = approvedEc.reduce((s, c) => s + (c.days || 0), 0);
+            const compOffTotalHours = approvedEc.reduce((s, c) => s + (c.hours || 0), 0);
             const compOffConverted = convertCompOffDaysHours(compOffTotalDays, compOffTotalHours);
 
             // CL / SL / EL from leave requests
@@ -760,9 +772,10 @@ router.get('/summary', async (req, res, next) => {
 
             const daysPresent = et.filter(t => t.inAt).length;
 
-            // Comp-off this month
-            const compOffTotalDays = ec.reduce((s, c) => s + (c.days || 0), 0);
-            const compOffTotalHours = ec.reduce((s, c) => s + (c.hours || 0), 0);
+            // Comp-off this month: only approved entries count toward the balance
+            const approvedEc = ec.filter(c => c.status === 'approved');
+            const compOffTotalDays = approvedEc.reduce((s, c) => s + (c.days || 0), 0);
+            const compOffTotalHours = approvedEc.reduce((s, c) => s + (c.hours || 0), 0);
             const compOffConverted = convertCompOffDaysHours(compOffTotalDays, compOffTotalHours);
 
             // Leaves
@@ -799,14 +812,12 @@ router.get('/summary', async (req, res, next) => {
             // EL credited
             const elCredited = getElCredited(emp.leaveStartMonth, m, y, emp.category);
 
-            // CL/SL: fresh allocation if this is the leave-start month, else use previous balance
-            const isLeaveStartMonth = (emp.leaveStartMonth && (
-                (m === 1 && emp.leaveStartMonth <= 1) ||   // January fresh
-                (m === 6 && emp.leaveStartMonth <= 6) ||   // June fresh
-                m === emp.leaveStartMonth
-            ));
-            const prevCl = isLeaveStartMonth ? 12 : (prevBal.clBalance || 0);
-            const prevSl = isLeaveStartMonth ? 15 : (prevBal.slBalance || 0);
+            // CL/SL: fresh allocation only on the employee's own leave-start month.
+            // Adhoc employees (null allocation) carry forward without reset.
+            const allocation = getFreshLeaveAllocation(emp.category);
+            const isLeaveStartMonth = allocation && emp.leaveStartMonth && m === emp.leaveStartMonth;
+            const prevCl = isLeaveStartMonth ? allocation.cl : (prevBal.clBalance || 0);
+            const prevSl = isLeaveStartMonth ? allocation.sl : (prevBal.slBalance || 0);
 
             // Run the full summary calculation
             const calc = calculateSummary({
@@ -867,7 +878,7 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
 
         const empIds = employees.map(e => e.id);
 
-        const [compOffs, permissions, leaveRequests, prevBalances] = await Promise.all([
+        const [compOffs, permissions, leaveRequests, prevBalances, timesheets, rawAssignments] = await Promise.all([
             prisma.compOff.findMany({ where: { tenantId: req.tenantId, month: m, year: y } }),
             prisma.permissionEntry.findMany({ where: { tenantId: req.tenantId, month: m, year: y } }),
             prisma.leaveRequest.findMany({
@@ -883,7 +894,27 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
                 const prevYear = m === 1 ? y - 1 : y;
                 return prisma.monthlyBalance.findMany({ where: { tenantId: req.tenantId, month: prevMonth, year: prevYear } });
             })(),
+            prisma.timesheet.findMany({
+                where: { tenantId: req.tenantId, date: { gte: startOfMonth, lte: endOfMonth }, employeeId: { in: empIds } },
+            }),
+            prisma.employeeWorkShift.findMany({
+                where: { employeeId: { in: empIds }, startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth } },
+                include: { workShift: true },
+            }),
         ]);
+
+        const shiftAssignments = {};
+        for (const a of rawAssignments) {
+            if (!shiftAssignments[a.employeeId]) shiftAssignments[a.employeeId] = [];
+            shiftAssignments[a.employeeId].push({
+                startMs: dayjs(a.startDate).startOf('day').valueOf(),
+                endMs: dayjs(a.endDate).endOf('day').valueOf(),
+                shift: a.workShift,
+            });
+        }
+
+        const tsIdx = {};
+        timesheets.forEach(t => { (tsIdx[t.employeeId] = tsIdx[t.employeeId] || []).push(t); });
 
         const prevBalIdx = {};
         prevBalances.forEach(b => { prevBalIdx[b.employeeId] = b; });
@@ -893,10 +924,12 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
             const ec = compOffs.filter(c => c.employeeId === emp.id);
             const ep = permissions.filter(p => p.employeeId === emp.id);
             const el = leaveRequests.filter(l => l.employeeId === emp.id);
+            const et = tsIdx[emp.id] || [];
             const prevBal = prevBalIdx[emp.id] || {};
 
-            const compOffTotalDays = ec.reduce((s, c) => s + (c.days || 0), 0);
-            const compOffTotalHours = ec.reduce((s, c) => s + (c.hours || 0), 0);
+            const approvedEc = ec.filter(c => c.status === 'approved');
+            const compOffTotalDays = approvedEc.reduce((s, c) => s + (c.days || 0), 0);
+            const compOffTotalHours = approvedEc.reduce((s, c) => s + (c.hours || 0), 0);
             const compOffConverted = convertCompOffDaysHours(compOffTotalDays, compOffTotalHours);
 
             const clLeaves = el.filter(l => l.leaveType?.code === 'CL' || l.leaveType?.name?.toLowerCase().includes('casual'));
@@ -908,13 +941,31 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
 
             const elCredited = getElCredited(emp.leaveStartMonth, m, y, emp.category);
 
-            const isLeaveStartMonth = emp.leaveStartMonth && (m === 1 || m === 6 || m === emp.leaveStartMonth);
-            const prevCl = isLeaveStartMonth ? 12 : (prevBal.clBalance || 0);
-            const prevSl = isLeaveStartMonth ? 15 : (prevBal.slBalance || 0);
+            // Late check-ins: same detection logic as /summary route
+            const lateCheckInCount = et.filter(t => {
+                if (!t.inAt) return false;
+                const empShift = getEmployeeShiftForDate(emp.id, dayjs(t.date), shiftAssignments);
+                if (empShift && empShift.dayRecord && !empShift.dayRecord.isOff) {
+                    const shiftStartMins = timeToMinutes(empShift.dayRecord.startTime);
+                    const graceMins = empShift.dayRecord.graceMins || 0;
+                    if (shiftStartMins !== null) {
+                        const punchInMins = dayjs(t.inAt).hour() * 60 + dayjs(t.inAt).minute();
+                        return punchInMins > shiftStartMins + graceMins;
+                    }
+                }
+                const h = dayjs(t.inAt).hour();
+                const min = dayjs(t.inAt).minute();
+                return h > 9 || (h === 9 && min > 15);
+            }).length;
+
+            const allocation = getFreshLeaveAllocation(emp.category);
+            const isLeaveStartMonth = allocation && emp.leaveStartMonth && m === emp.leaveStartMonth;
+            const prevCl = isLeaveStartMonth ? allocation.cl : (prevBal.clBalance || 0);
+            const prevSl = isLeaveStartMonth ? allocation.sl : (prevBal.slBalance || 0);
 
             const calc = calculateSummary({
                 clAvailed: clLeaves.reduce((s, l) => s + (l.days || 0), 0),
-                lateCheckInCount: 0, // Not needed for balance — late is already in perm
+                lateCheckInCount,
                 slAvailed: slLeaves.reduce((s, l) => s + (l.days || 0), 0),
                 elUtilised: elLeaves.reduce((s, l) => s + (l.days || 0), 0),
                 elCredited,
@@ -940,7 +991,7 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
                     clBalance: Math.max(0, calc.balance.cl),
                     slBalance: Math.max(0, calc.balance.sl),
                     elBalance: Math.max(0, calc.balance.el),
-                    lateEarlyDays: Math.max(0, calc.adjusted.permAdjusted || 0),
+                    lateEarlyDays: 0,
                     lateEarlyHours: Math.max(0, calc.balance.permHours),
                     lopDays: calc.lopDays,
                     isClosed: true,
@@ -955,7 +1006,7 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
                     clBalance: Math.max(0, calc.balance.cl),
                     slBalance: Math.max(0, calc.balance.sl),
                     elBalance: Math.max(0, calc.balance.el),
-                    lateEarlyDays: Math.max(0, calc.adjusted.permAdjusted || 0),
+                    lateEarlyDays: 0,
                     lateEarlyHours: Math.max(0, calc.balance.permHours),
                     lopDays: calc.lopDays,
                     isClosed: true,
