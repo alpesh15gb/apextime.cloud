@@ -26,6 +26,10 @@ export default function CompOff() {
     const [employees, setEmployees] = useState([]);
     const [setupMsg, setSetupMsg] = useState('');
     const [bulkForm, setBulkForm] = useState({ month: String(dayjs().month()), year: String(dayjs().year()), cl: '12', sl: '12', el: '0' });
+    const [empWiseMonth, setEmpWiseMonth] = useState(String(dayjs().month())); // 0-based index
+    const [empWiseYear, setEmpWiseYear] = useState(String(dayjs().year()));
+    const [empBalanceRows, setEmpBalanceRows] = useState({}); // { [empId]: { cl, sl, el } }
+    const [empWiseMsg, setEmpWiseMsg] = useState('');
 
     const loadData = async () => {
         setLoading(true);
@@ -79,6 +83,29 @@ export default function CompOff() {
             alert(res.data.message);
             loadData();
         } catch (err) { alert(err.response?.data?.message || 'Failed'); }
+    };
+
+    const getEmpRow = (empId) => empBalanceRows[empId] || { cl: '0', sl: '0', el: '0' };
+    const setEmpRow = (empId, field, val) => setEmpBalanceRows(prev => ({
+        ...prev,
+        [empId]: { ...getEmpRow(empId), [field]: val },
+    }));
+
+    const handleSetEmpBalance = async (empId, empName) => {
+        const row = getEmpRow(empId);
+        try {
+            await api.post('/compoff/set-initial-balance', {
+                employeeId: empId,
+                month: parseInt(empWiseMonth) + 1,
+                year: parseInt(empWiseYear),
+                clBalance: parseFloat(row.cl || 0),
+                slBalance: parseFloat(row.sl || 0),
+                elBalance: parseFloat(row.el || 0),
+            });
+            setEmpWiseMsg(`✅ Balance set for ${empName}`);
+        } catch (err) {
+            setEmpWiseMsg('❌ ' + (err.response?.data?.error || 'Failed'));
+        }
     };
 
     const exportSummaryExcel = () => {
@@ -697,6 +724,92 @@ export default function CompOff() {
                                 } catch (err) { setSetupMsg('❌ ' + (err.response?.data?.error || 'Failed')); }
                             }}>Set Balances for All Employees</button>
                         </div>
+                    </div>
+
+                    {/* Employee-wise Initial Balance */}
+                    <div className="card" style={{ padding: 24, marginTop: 20 }}>
+                        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)' }}>
+                            Employee-wise Initial Balances
+                        </h4>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 16 }}>
+                            Set different CL / SL / EL starting balances for individual employees. Use the row-level <strong>Set</strong> button to save each employee separately.
+                        </p>
+
+                        {empWiseMsg && (
+                            <div className="toast toast-success" style={{ position: 'relative', marginBottom: 12 }}>{empWiseMsg}</div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 16, flexWrap: 'wrap' }}>
+                            <div>
+                                <label className="form-label">Month</label>
+                                <select className="form-input" value={empWiseMonth} onChange={e => setEmpWiseMonth(e.target.value)}>
+                                    {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="form-label">Year</label>
+                                <input type="number" className="form-input" style={{ width: 90 }} value={empWiseYear} onChange={e => setEmpWiseYear(e.target.value)} />
+                            </div>
+                        </div>
+
+                        {employees.length === 0 ? (
+                            <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No employees loaded.</div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="data-table" style={{ minWidth: 560 }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{ width: 36, textAlign: 'center' }}>#</th>
+                                            <th>Employee</th>
+                                            <th style={{ textAlign: 'center', width: 80 }}>Category</th>
+                                            <th style={{ textAlign: 'center', width: 90 }}>CL</th>
+                                            <th style={{ textAlign: 'center', width: 90 }}>SL</th>
+                                            <th style={{ textAlign: 'center', width: 90 }}>EL</th>
+                                            <th style={{ width: 70 }}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {employees.map((emp, idx) => {
+                                            const row = getEmpRow(emp.id);
+                                            return (
+                                                <tr key={emp.id}>
+                                                    <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
+                                                    <td>
+                                                        <div style={{ fontWeight: 600, fontSize: 13 }}>{emp.name}</div>
+                                                        {emp.employeeCode && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{emp.employeeCode}</div>}
+                                                    </td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <span style={{
+                                                            padding: '1px 8px', borderRadius: 12, fontSize: 10, fontWeight: 600,
+                                                            background: `${CAT_COLORS[emp.category] || '#6366f1'}22`,
+                                                            color: CAT_COLORS[emp.category] || '#6366f1',
+                                                        }}>{CAT_LABELS[emp.category] || emp.category || '-'}</span>
+                                                    </td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <input type="number" step="0.5" className="form-input" style={{ width: 70, textAlign: 'center', padding: '4px 6px' }}
+                                                            value={row.cl} onChange={e => setEmpRow(emp.id, 'cl', e.target.value)} />
+                                                    </td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <input type="number" step="0.5" className="form-input" style={{ width: 70, textAlign: 'center', padding: '4px 6px' }}
+                                                            value={row.sl} onChange={e => setEmpRow(emp.id, 'sl', e.target.value)} />
+                                                    </td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <input type="number" step="0.5" className="form-input" style={{ width: 70, textAlign: 'center', padding: '4px 6px' }}
+                                                            value={row.el} onChange={e => setEmpRow(emp.id, 'el', e.target.value)} />
+                                                    </td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <button className="btn btn-primary btn-sm" style={{ fontSize: 12, padding: '4px 12px' }}
+                                                            onClick={() => handleSetEmpBalance(emp.id, emp.name)}>
+                                                            Set
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
