@@ -220,7 +220,7 @@ export default function CompOff() {
     const getInitials = (name) => (name || '?').split(' ').map(n => n[0] || '').join('').slice(0, 2).toUpperCase() || '?';
 
     return (
-        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+        <div className="compoff-root" style={{ maxWidth: 1400, margin: '0 auto' }}>
             {/* ───── HEADER ───── */}
             <div className="print-hide" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h2 style={{ fontSize: 22, fontWeight: 700 }}>Comp-Off & Leave Management</h2>
@@ -836,31 +836,48 @@ export default function CompOff() {
             <style>{`
                 @page {
                     size: A4 landscape;
-                    margin: 6mm 8mm;
+                    margin: 5mm 6mm;
                 }
                 @media print {
-                    html, body {
-                        width: 100%;
+                    /* Reset the full layout so the table gets the whole page width */
+                    html, body, #root, .app-layout, .main-content, .content-area {
+                        height: auto !important;
+                        min-height: auto !important;
+                        overflow: visible !important;
+                        display: block !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        max-width: none !important;
+                        width: 100% !important;
+                    }
+                    body {
                         background: white !important;
                         color: black !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
-                    .sidebar, .navbar, .print-hide { display: none !important; }
-                    .main-content { margin: 0 !important; padding: 0 !important; }
+                    .sidebar, .navbar, .top-bar, .print-hide { display: none !important; }
+
+                    /* Remove the component's maxWidth constraint */
+                    .compoff-root {
+                        max-width: none !important;
+                        width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+
                     .card {
                         box-shadow: none !important;
                         border: none !important;
                         padding: 0 !important;
                         overflow: visible !important;
+                        width: 100% !important;
                     }
                     .data-table {
                         width: 100% !important;
-                        font-size: 6.5pt !important;
+                        font-size: 6pt !important;
                         border-collapse: collapse !important;
-                        table-layout: auto !important;
+                        table-layout: fixed !important;
                     }
                     .data-table, .data-table th, .data-table td, .badge {
                         -webkit-print-color-adjust: exact !important;
@@ -869,25 +886,26 @@ export default function CompOff() {
                     }
                     .data-table th, .data-table td {
                         color: black !important;
-                        border: 1px solid #aaa !important;
-                        padding: 2px 2px !important;
+                        border: 0.5px solid #999 !important;
+                        padding: 2px 1px !important;
                         white-space: normal !important;
-                        word-break: normal !important;
-                        overflow-wrap: anywhere !important;
-                        overflow: visible !important;
+                        word-break: break-word !important;
+                        overflow: hidden !important;
+                        text-align: center !important;
                     }
-                    /* Name column — always enough room */
-                    .data-table td:nth-child(2), .data-table th:nth-child(2) {
-                        min-width: 65px !important;
-                        word-break: normal !important;
-                    }
-                    /* Designation column */
-                    .data-table td:nth-child(3), .data-table th:nth-child(3) {
-                        min-width: 50px !important;
-                    }
+                    /* Name col wider, others equal */
+                    .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 3% !important; }
+                    .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 12% !important; text-align: left !important; font-weight: 600 !important; }
+                    .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 8% !important; }
+                    .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 4% !important; }
+                    .data-table th:nth-child(5), .data-table td:nth-child(5) { width: 4% !important; }
+                    /* remaining 19 cols share ~69% → ~3.6% each */
+                    .data-table th:nth-child(n+6), .data-table td:nth-child(n+6) { width: 3.6% !important; }
+
                     .data-table th {
                         background-color: #e5e7eb !important;
                         font-weight: 700 !important;
+                        font-size: 5.5pt !important;
                     }
                     /* Available / Accumulated columns (13–17) — light grey */
                     .data-table td:nth-child(n+13):nth-child(-n+17) {
@@ -901,29 +919,30 @@ export default function CompOff() {
                         font-weight: 700 !important;
                     }
                     /* LOP column (23) */
-                    .data-table td:nth-child(23) {
-                        font-weight: 700 !important;
-                    }
+                    .data-table td:nth-child(23) { font-weight: 700 !important; }
+
                     /* FULL badge — outline style */
                     .badge-success {
                         background-color: #fff !important;
                         color: #000 !important;
-                        border: 1.5px solid #000 !important;
-                        padding: 1px 4px !important;
-                        border-radius: 3px !important;
+                        border: 1px solid #000 !important;
+                        padding: 1px 3px !important;
+                        border-radius: 2px !important;
                         font-weight: 700 !important;
+                        font-size: 5.5pt !important;
                     }
                     /* LOP badge — solid black */
                     .badge-danger {
                         background-color: #000 !important;
                         color: #fff !important;
-                        padding: 1px 4px !important;
-                        border-radius: 3px !important;
+                        padding: 1px 3px !important;
+                        border-radius: 2px !important;
                         font-weight: 700 !important;
+                        font-size: 5.5pt !important;
                     }
 
-                    /* Print header above table */
-                    .print-title { display: block !important; font-size: 11pt; font-weight: 700; text-align: center; margin-bottom: 6px; }
+                    /* Print title */
+                    .print-title { display: block !important; font-size: 10pt; font-weight: 700; text-align: center; margin-bottom: 5px; }
                 }
                 .print-title { display: none; }
             `}</style>
