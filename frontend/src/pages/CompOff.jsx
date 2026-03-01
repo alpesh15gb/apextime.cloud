@@ -17,6 +17,8 @@ export default function CompOff() {
     const [summaryData, setSummaryData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [departments, setDepartments] = useState([]);
+    const [departmentId, setDepartmentId] = useState('');
 
     const [showCompOffModal, setShowCompOffModal] = useState(false);
     const [showPermModal, setShowPermModal] = useState(false);
@@ -34,20 +36,23 @@ export default function CompOff() {
     const loadData = async () => {
         setLoading(true);
         try {
+            const params = { month, year };
+            if (departmentId) params.departmentId = departmentId;
             if (activeTab === 'details') {
-                const res = await api.get(`/compoff/details?month=${month}&year=${year}`);
+                const res = await api.get('/compoff/details', { params });
                 setDetailsData(res.data);
-            } else {
-                const res = await api.get(`/compoff/summary?month=${month}&year=${year}`);
+            } else if (activeTab === 'summary') {
+                const res = await api.get('/compoff/summary', { params });
                 setSummaryData(res.data);
             }
         } catch (err) { console.error(err); }
         setLoading(false);
     };
 
-    useEffect(() => { loadData(); }, [month, year, activeTab]);
+    useEffect(() => { loadData(); }, [month, year, activeTab, departmentId]);
     useEffect(() => {
         api.get('/employees?limit=500').then(r => setEmployees(r.data.data || r.data || [])).catch(() => { });
+        api.get('/departments').then(r => setDepartments(r.data || [])).catch(() => { });
     }, []);
 
     const handleAddCompOff = async (e) => {
@@ -252,6 +257,19 @@ export default function CompOff() {
                         transition: 'var(--transition)',
                     }} onClick={() => setActiveTab('setup')}><Settings size={13} style={{ verticalAlign: -2, marginRight: 4 }} />Setup</button>
                 </div>
+                {departments.length > 0 && (
+                    <select
+                        value={departmentId}
+                        onChange={e => setDepartmentId(e.target.value)}
+                        style={{
+                            padding: '7px 12px', borderRadius: 20, border: '1px solid var(--border)',
+                            fontSize: 13, outline: 'none', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', cursor: 'pointer',
+                        }}
+                    >
+                        <option value="">All Departments</option>
+                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                )}
                 <div style={{ position: 'relative', marginLeft: 'auto' }}>
                     <Search size={14} style={{ position: 'absolute', left: 10, top: 9, color: 'var(--text-muted)' }} />
                     <input style={{

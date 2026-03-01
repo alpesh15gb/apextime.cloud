@@ -479,18 +479,25 @@ function calculateSummary({
 
 // ─── DETAILS (per-employee monthly breakdown) ───
 
-// GET /api/compoff/details?month=&year=
+// GET /api/compoff/details?month=&year=&departmentId=
 router.get('/details', async (req, res, next) => {
     try {
         const m = parseInt(req.query.month) || (dayjs().month() + 1);
         const y = parseInt(req.query.year) || dayjs().year();
+        const deptId = req.query.departmentId ? parseInt(req.query.departmentId) : null;
 
-        const startOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).startOf('month').toDate();
-        const endOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).endOf('month').toDate();
+        // Use UTC midnight so Prisma sends the correct date string to Postgres (@db.Date)
+        // Without this, dayjs startOf('month') in IST produces Feb 28T18:30Z for March,
+        // causing Feb 28 timesheet rows to bleed into the next month's query.
         const daysInMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).daysInMonth();
+        const startOfMonth = new Date(Date.UTC(y, m - 1, 1));
+        const endOfMonth = new Date(Date.UTC(y, m - 1, daysInMonth, 23, 59, 59, 999));
+
+        const empWhere = { tenantId: req.tenantId, status: 'active' };
+        if (deptId) empWhere.departmentId = deptId;
 
         const employees = await prisma.employee.findMany({
-            where: { tenantId: req.tenantId, status: 'active' },
+            where: empWhere,
             include: { contact: true, department: true, designation: true },
             orderBy: { employeeCode: 'asc' },
         });
@@ -694,17 +701,22 @@ router.get('/details', async (req, res, next) => {
 
 // ─── SUMMARY ─────────────────────────────────────
 
-// GET /api/compoff/summary?month=&year=
+// GET /api/compoff/summary?month=&year=&departmentId=
 router.get('/summary', async (req, res, next) => {
     try {
         const m = parseInt(req.query.month) || (dayjs().month() + 1);
         const y = parseInt(req.query.year) || dayjs().year();
+        const deptId = req.query.departmentId ? parseInt(req.query.departmentId) : null;
 
-        const startOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).startOf('month').toDate();
-        const endOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).endOf('month').toDate();
+        const daysInMonthN = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).daysInMonth();
+        const startOfMonth = new Date(Date.UTC(y, m - 1, 1));
+        const endOfMonth = new Date(Date.UTC(y, m - 1, daysInMonthN, 23, 59, 59, 999));
+
+        const empWhere = { tenantId: req.tenantId, status: 'active' };
+        if (deptId) empWhere.departmentId = deptId;
 
         const employees = await prisma.employee.findMany({
-            where: { tenantId: req.tenantId, status: 'active' },
+            where: empWhere,
             include: { contact: true, department: true, designation: true },
             orderBy: { employeeCode: 'asc' },
         });
@@ -869,8 +881,9 @@ router.post('/close-month', requireRole('admin', 'super_admin'), async (req, res
         // Get the summary for this month (reuse calculation)
         const summaryRes = { query: { month: m, year: y }, tenantId: req.tenantId };
 
-        const startOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).startOf('month').toDate();
-        const endOfMonth = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).endOf('month').toDate();
+        const daysInMonthClose = dayjs(`${y}-${String(m).padStart(2, '0')}-01`).daysInMonth();
+        const startOfMonth = new Date(Date.UTC(y, m - 1, 1));
+        const endOfMonth = new Date(Date.UTC(y, m - 1, daysInMonthClose, 23, 59, 59, 999));
 
         const employees = await prisma.employee.findMany({
             where: { tenantId: req.tenantId, status: 'active' },
