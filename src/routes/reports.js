@@ -275,7 +275,7 @@ router.get('/monthly', async (req, res, next) => {
 // GET /api/reports/approvals
 router.get('/approvals', async (req, res, next) => {
     try {
-        const { startDate, endDate, status } = req.query;
+        const { startDate, endDate, status, departmentId } = req.query;
 
         const start = startDate ? new Date(startDate) : dayjs().startOf('month').toDate();
         const end = endDate ? new Date(endDate) : dayjs().endOf('month').toDate();
@@ -285,6 +285,8 @@ router.get('/approvals', async (req, res, next) => {
             date: { gte: start, lte: end },
             status: status ? status : { in: ['approved', 'rejected', 'pending'] }
         };
+
+        if (departmentId) where.employee = { departmentId: parseInt(departmentId) };
 
         const records = await prisma.timesheet.findMany({
             where,

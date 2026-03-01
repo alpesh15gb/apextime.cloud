@@ -30,6 +30,10 @@ const LocationCell = ({ location, address, onFetch }) => {
 export default function Reports() {
     const [activeTab, setActiveTab] = useState('monthly'); // monthly | approvals
 
+    // Department filter (shared)
+    const [departments, setDepartments] = useState([]);
+    const [departmentId, setDepartmentId] = useState('');
+
     // Monthly State
     const [month, setMonth] = useState(dayjs().month() + 1);
     const [year, setYear] = useState(dayjs().year());
@@ -45,23 +49,32 @@ export default function Reports() {
 
     const [loading, setLoading] = useState(false);
 
+    // Load departments once
+    useEffect(() => {
+        api.get('/departments').then(res => setDepartments(res.data || []));
+    }, []);
+
     // Initial Load
     useEffect(() => {
         if (activeTab === 'monthly') loadMonthlyData();
         else loadApprovalData();
-    }, [activeTab, month, year, approvalStart, approvalEnd, approvalStatus]);
+    }, [activeTab, month, year, departmentId, approvalStart, approvalEnd, approvalStatus]);
 
     const loadMonthlyData = () => {
         setLoading(true);
-        api.get(`/reports/monthly?month=${month}&year=${year}`)
+        const params = { month, year };
+        if (departmentId) params.departmentId = departmentId;
+        api.get('/reports/monthly', { params })
             .then(res => { setMonthlyData(res.data); setLoading(false); })
             .catch(() => { alert('Failed to load report'); setLoading(false); });
     };
 
     const loadApprovalData = () => {
         setLoading(true);
-        const query = `?startDate=${approvalStart}&endDate=${approvalEnd}${approvalStatus ? `&status=${approvalStatus}` : ''}`;
-        api.get(`/reports/approvals${query}`)
+        const params = { startDate: approvalStart, endDate: approvalEnd };
+        if (approvalStatus) params.status = approvalStatus;
+        if (departmentId) params.departmentId = departmentId;
+        api.get('/reports/approvals', { params })
             .then(res => { setApprovalData(res.data); setLoading(false); })
             .catch(() => { alert('Failed to load approvals'); setLoading(false); });
     };
@@ -143,7 +156,8 @@ export default function Reports() {
         ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 8 }];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Attendance");
-        XLSX.writeFile(wb, `Attendance_Report_${month}_${year}.xlsx`);
+        const deptSuffix = departmentId ? `_${departments.find(d => d.id == departmentId)?.name || departmentId}` : '';
+        XLSX.writeFile(wb, `Attendance_Report_${month}_${year}${deptSuffix}.xlsx`);
     };
 
     const exportApprovalsExcel = () => {
@@ -158,7 +172,8 @@ export default function Reports() {
         ws['!cols'] = [{ wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 15 }, { wch: 8 }, { wch: 8 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 25 }];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Approvals");
-        XLSX.writeFile(wb, `Approvals_Report_${approvalStart}_to_${approvalEnd}.xlsx`);
+        const deptSuffix = departmentId ? `_${departments.find(d => d.id == departmentId)?.name || departmentId}` : '';
+        XLSX.writeFile(wb, `Approvals_Report_${approvalStart}_to_${approvalEnd}${deptSuffix}.xlsx`);
     };
 
     const handlePrint = () => window.print();
@@ -175,7 +190,13 @@ export default function Reports() {
                 </div>
 
                 <div className="card" style={{ padding: 16, display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {/* Department dropdown — always visible */}
+                        <select value={departmentId} onChange={e => setDepartmentId(e.target.value)} className="form-input" style={{ width: 180 }}>
+                            <option value="">All Departments</option>
+                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        </select>
+
                         {activeTab === 'monthly' ? (
                             <>
                                 <select value={month} onChange={e => setMonth(e.target.value)} className="form-input" style={{ width: 140 }}>
@@ -222,6 +243,7 @@ export default function Reports() {
                 <div className="report-container printable" style={{ background: 'white', color: 'black', padding: '20px' }}>
                     <div style={{ textAlign: 'center', marginBottom: 10 }} className="print-header">
                         <h3>Monthly Performance Report</h3>
+                        {departmentId && <p style={{ marginBottom: 2, fontWeight: 'bold' }}>Department: {departments.find(d => d.id == departmentId)?.name}</p>}
                         <p style={{ marginBottom: 0 }}>From: 01/{month.toString().padStart(2, '0')}/{year} To: {monthlyData.meta.daysInMonth}/{month.toString().padStart(2, '0')}/{year}</p>
                     </div>
 
@@ -312,6 +334,7 @@ export default function Reports() {
                 <div className="report-container printable" style={{ background: 'white', color: 'black', padding: '20px' }}>
                     <div style={{ textAlign: 'center', marginBottom: 20 }} className="print-header">
                         <h3>Day Wise Approval Report</h3>
+                        {departmentId && <p style={{ marginBottom: 2, fontWeight: 'bold' }}>Department: {departments.find(d => d.id == departmentId)?.name}</p>}
                         <p>From: {approvalStart} To: {approvalEnd}</p>
                     </div>
 
