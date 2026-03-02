@@ -1,459 +1,554 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>ApexTime Cloud – School ERP Brochure</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  *{ margin:0; padding:0; box-sizing:border-box; }
 
-  body {
-    font-family: 'Inter', Arial, sans-serif;
-    background: #fff;
-    color: #1e293b;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  /* ── PAGE SETTINGS ── */
-  @page { size: A4; margin: 0; }
-
-  .page {
-    width: 210mm;
-    min-height: 297mm;
-    page-break-after: always;
-    overflow: hidden;
-    position: relative;
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#fff;
+    color:#0f172a;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
   }
 
-  /* ═══════════════════════════════════════════
-     PAGE 1 – COVER
-  ═══════════════════════════════════════════ */
-  .cover {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 70%, #4f46e5 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 60px 40px;
-    position: relative;
-    overflow: hidden;
+  @page{ size:A4; margin:0; }
+
+  .page{
+    width:210mm;
+    height:297mm;
+    page-break-after:always;
+    overflow:hidden;
+    position:relative;
+    background:#fff;
+  }
+  .page:last-child{ page-break-after:avoid; }
+
+  /* ─── SHARED HEADER ─── */
+  .pg-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:20px 44px 16px;
+    border-bottom:1px solid #e8edf5;
+    background:#fff;
+  }
+  .logo-sm{ display:flex; align-items:center; gap:9px; }
+  .logo-sm .icon{
+    width:30px; height:30px; border-radius:8px;
+    background:linear-gradient(135deg,#4f46e5,#7c3aed);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:11px; font-weight:800; letter-spacing:-.5px;
+  }
+  .logo-sm span{ font-size:14px; font-weight:700; color:#0f172a; }
+  .pg-label{ font-size:10px; font-weight:600; color:#94a3b8; letter-spacing:.1em; text-transform:uppercase; }
+
+  /* ─── PAGE FOOTER ─── */
+  .pg-footer{
+    position:absolute; bottom:0; left:0; right:0;
+    padding:10px 44px;
+    display:flex; justify-content:space-between; align-items:center;
+    border-top:1px solid #f1f5f9;
+  }
+  .pg-footer-brand{ font-size:10px; color:#cbd5e1; font-weight:500; }
+  .pg-num{ font-size:10px; color:#cbd5e1; font-weight:500; }
+
+  /* ─── INNER CONTENT AREA ─── */
+  .page-body{
+    padding:28px 44px 52px;
   }
 
-  /* decorative circles */
-  .cover::before {
-    content: '';
-    position: absolute;
-    top: -120px; right: -120px;
-    width: 400px; height: 400px;
-    border-radius: 50%;
-    background: rgba(99,102,241,.18);
+  /* ─── SECTION LABELS ─── */
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:6px;
+    background:#eef2ff; color:#4f46e5;
+    font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    padding:5px 12px; border-radius:100px;
+    margin-bottom:10px;
   }
-  .cover::after {
-    content: '';
-    position: absolute;
-    bottom: -100px; left: -100px;
-    width: 350px; height: 350px;
-    border-radius: 50%;
-    background: rgba(129,140,248,.12);
+  .eyebrow-dot{ width:6px; height:6px; border-radius:50%; background:#6366f1; }
+
+  .h1{ font-size:32px; font-weight:900; color:#0f172a; line-height:1.15; margin-bottom:8px; }
+  .h2{ font-size:24px; font-weight:800; color:#0f172a; line-height:1.2; margin-bottom:6px; }
+  .h3{ font-size:18px; font-weight:700; color:#0f172a; margin-bottom:6px; }
+  .lead{ font-size:13.5px; color:#64748b; line-height:1.65; margin-bottom:24px; max-width:580px; }
+
+  /* ════════════════════════════════════════
+     PAGE 1 · COVER
+  ════════════════════════════════════════ */
+  .cover{
+    background:linear-gradient(155deg,#0b0f1e 0%,#13103a 35%,#1e1155 65%,#2d1b8a 100%);
+    display:flex; flex-direction:column;
+    position:relative; overflow:hidden;
+  }
+  /* grid overlay */
+  .cover::before{
+    content:'';
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(99,102,241,.06) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(99,102,241,.06) 1px,transparent 1px);
+    background-size:40px 40px;
+  }
+  /* glow orbs */
+  .orb{
+    position:absolute; border-radius:50%;
+    filter:blur(80px);
+    pointer-events:none;
+  }
+  .orb1{ width:380px; height:380px; top:-80px; right:-100px; background:radial-gradient(circle,rgba(99,102,241,.45) 0%,transparent 70%); }
+  .orb2{ width:320px; height:320px; bottom:-60px; left:-80px; background:radial-gradient(circle,rgba(124,58,237,.35) 0%,transparent 70%); }
+  .orb3{ width:200px; height:200px; top:45%; left:30%; background:radial-gradient(circle,rgba(168,85,247,.2) 0%,transparent 70%); }
+
+  .cover-nav{
+    position:relative; z-index:10;
+    padding:28px 44px 0;
+    display:flex; align-items:center; gap:12px;
+  }
+  .cover-logo-icon{
+    width:48px; height:48px; border-radius:14px;
+    background:linear-gradient(135deg,#6366f1,#818cf8);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; font-weight:900; color:#fff;
+    box-shadow:0 4px 24px rgba(99,102,241,.5);
+  }
+  .cover-logo-text h1{ font-size:22px; font-weight:800; color:#fff; line-height:1; }
+  .cover-logo-text p{ font-size:11px; color:#a5b4fc; font-weight:500; }
+
+  .cover-body{
+    position:relative; z-index:10;
+    flex:1; display:flex; flex-direction:column;
+    justify-content:center;
+    padding:0 44px 0;
   }
 
-  .cover-inner { position: relative; z-index: 2; }
+  .cover-super{
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(99,102,241,.2);
+    border:1px solid rgba(99,102,241,.4);
+    color:#a5b4fc; font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+    padding:5px 14px; border-radius:100px;
+    margin-bottom:20px; width:fit-content;
+  }
+  .cover-super-dot{ width:6px; height:6px; border-radius:50%; background:#818cf8; }
 
-  .logo-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 40px;
+  .cover-h1{
+    font-size:56px; font-weight:900; color:#fff;
+    line-height:1.05; margin-bottom:6px;
+    letter-spacing:-.02em;
   }
-  .logo-icon {
-    width: 72px; height: 72px;
-    border-radius: 20px;
-    background: linear-gradient(135deg, #6366f1, #818cf8);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; font-weight: 900; color: #fff;
-    box-shadow: 0 8px 32px rgba(99,102,241,.5);
+  .cover-h1 .accent{ color:#818cf8; }
+  .cover-sub{
+    font-size:18px; font-weight:300; color:#c7d2fe;
+    max-width:480px; line-height:1.55; margin-bottom:36px;
   }
-  .logo-text h1 { font-size: 42px; font-weight: 800; color: #fff; line-height: 1; }
-  .logo-text p  { font-size: 16px; color: #a5b4fc; margin-top: 4px; font-weight: 500; }
+  .cover-sub strong{ font-weight:600; color:#fff; }
 
-  .cover-tagline {
-    font-size: 22px;
-    font-weight: 300;
-    color: #c7d2fe;
-    max-width: 520px;
-    line-height: 1.5;
-    margin-bottom: 48px;
+  .cover-tags{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin-bottom:44px;
   }
-  .cover-tagline strong { color: #fff; font-weight: 700; }
-
-  .cover-pills {
-    display: flex; flex-wrap: wrap; gap: 12px;
-    justify-content: center;
-    margin-bottom: 64px;
-  }
-  .pill {
-    background: rgba(255,255,255,.12);
-    border: 1px solid rgba(255,255,255,.2);
-    color: #e0e7ff;
-    padding: 8px 20px;
-    border-radius: 100px;
-    font-size: 13px;
-    font-weight: 500;
-    backdrop-filter: blur(4px);
+  .tag{
+    background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.14);
+    color:#e0e7ff; font-size:11.5px; font-weight:500;
+    padding:6px 14px; border-radius:8px;
+    backdrop-filter:blur(4px);
   }
 
-  .cover-stats {
-    display: flex; gap: 48px;
-    justify-content: center;
-    border-top: 1px solid rgba(255,255,255,.15);
-    padding-top: 40px;
+  .cover-stats{
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:0;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:16px;
+    overflow:hidden;
+    background:rgba(255,255,255,.04);
+    backdrop-filter:blur(8px);
   }
-  .cstat { text-align: center; }
-  .cstat-num  { font-size: 36px; font-weight: 800; color: #fff; }
-  .cstat-label{ font-size: 13px; color: #a5b4fc; font-weight: 500; margin-top: 4px; }
-
-  .cover-url {
-    position: absolute; bottom: 28px; right: 36px;
-    color: rgba(255,255,255,.4);
-    font-size: 12px;
-    font-weight: 500;
-    z-index: 2;
+  .cstat{
+    padding:20px 16px;
+    text-align:center;
+    border-right:1px solid rgba(255,255,255,.08);
   }
+  .cstat:last-child{ border-right:none; }
+  .cstat-num{ font-size:30px; font-weight:900; color:#fff; line-height:1; }
+  .cstat-label{ font-size:10.5px; color:#94a3b8; margin-top:5px; font-weight:500; }
 
-  /* ═══════════════════════════════════════════
-     PAGE 2 – FEATURES OVERVIEW
-  ═══════════════════════════════════════════ */
-  .page-inner {
-    padding: 52px 48px;
-    min-height: 297mm;
-    display: flex;
-    flex-direction: column;
+  .cover-bottom{
+    position:relative; z-index:10;
+    padding:20px 44px 24px;
+    display:flex; justify-content:space-between; align-items:center;
+    border-top:1px solid rgba(255,255,255,.07);
   }
-
-  .section-badge {
-    display: inline-block;
-    background: #eef2ff;
-    color: #4f46e5;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 5px 14px;
-    border-radius: 100px;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    margin-bottom: 12px;
+  .cover-bottom-left{ font-size:11px; color:rgba(255,255,255,.35); }
+  .cover-url{
+    font-size:12px; font-weight:600; color:#818cf8;
+    background:rgba(99,102,241,.15); padding:4px 12px; border-radius:6px;
+    border:1px solid rgba(99,102,241,.3);
   }
 
-  .section-title {
-    font-size: 30px;
-    font-weight: 800;
-    color: #0f172a;
-    line-height: 1.2;
-    margin-bottom: 8px;
+  /* ════════════════════════════════════════
+     PAGE 2 · FEATURES OVERVIEW
+  ════════════════════════════════════════ */
+  .feat-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
   }
-  .section-sub {
-    font-size: 15px;
-    color: #64748b;
-    margin-bottom: 36px;
-    max-width: 560px;
-    line-height: 1.6;
+  .feat-card{
+    background:#f8fafc;
+    border:1.5px solid #e8edf5;
+    border-radius:12px;
+    padding:18px 16px;
+    position:relative;
+    overflow:hidden;
+  }
+  .feat-card::before{
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:3px;
+    border-radius:3px 3px 0 0;
+  }
+  .feat-card.c-blue::before{ background:linear-gradient(90deg,#3b82f6,#60a5fa); }
+  .feat-card.c-purple::before{ background:linear-gradient(90deg,#8b5cf6,#a78bfa); }
+  .feat-card.c-green::before{ background:linear-gradient(90deg,#10b981,#34d399); }
+  .feat-card.c-orange::before{ background:linear-gradient(90deg,#f59e0b,#fbbf24); }
+  .feat-card.c-pink::before{ background:linear-gradient(90deg,#ec4899,#f472b6); }
+  .feat-card.c-teal::before{ background:linear-gradient(90deg,#14b8a6,#2dd4bf); }
+  .feat-card.c-yellow::before{ background:linear-gradient(90deg,#eab308,#facc15); }
+  .feat-card.c-red::before{ background:linear-gradient(90deg,#ef4444,#f87171); }
+  .feat-card.c-indigo::before{ background:linear-gradient(90deg,#6366f1,#818cf8); }
+
+  .feat-icon-wrap{
+    width:38px; height:38px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:10px; font-size:18px;
+  }
+  .feat-name{ font-size:13px; font-weight:700; color:#0f172a; margin-bottom:5px; }
+  .feat-desc{ font-size:11.5px; color:#64748b; line-height:1.55; }
+
+  .fi-blue{ background:#dbeafe; }
+  .fi-purple{ background:#ede9fe; }
+  .fi-green{ background:#dcfce7; }
+  .fi-orange{ background:#ffedd5; }
+  .fi-pink{ background:#fce7f3; }
+  .fi-teal{ background:#ccfbf1; }
+  .fi-yellow{ background:#fef9c3; }
+  .fi-red{ background:#fee2e2; }
+  .fi-indigo{ background:#eef2ff; }
+
+  /* ════════════════════════════════════════
+     PAGE 3 · HR & ATTENDANCE
+  ════════════════════════════════════════ */
+  .split-2{
+    display:grid; grid-template-columns:1fr 1fr; gap:20px;
   }
 
-  /* Feature cards grid */
-  .feat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-    flex: 1;
+  .gradient-card{
+    background:linear-gradient(145deg,#4f46e5 0%,#7c3aed 100%);
+    border-radius:16px; padding:28px 24px; color:#fff;
+    position:relative; overflow:hidden;
+  }
+  .gradient-card::after{
+    content:''; position:absolute;
+    top:-40px; right:-40px;
+    width:160px; height:160px; border-radius:50%;
+    background:rgba(255,255,255,.06);
+  }
+  .gradient-card h3{ font-size:16px; font-weight:700; margin-bottom:6px; }
+  .gradient-card p{ font-size:12px; color:rgba(255,255,255,.75); line-height:1.6; margin-bottom:16px; }
+
+  .check-list{ list-style:none; }
+  .check-list li{
+    display:flex; align-items:flex-start; gap:9px;
+    font-size:12px; color:rgba(255,255,255,.85);
+    margin-bottom:8px; line-height:1.45;
+  }
+  .check-list li .ck{
+    width:16px; height:16px; border-radius:50%; flex-shrink:0;
+    background:rgba(255,255,255,.18);
+    display:flex; align-items:center; justify-content:center;
+    font-size:8px; font-weight:700; margin-top:1px;
   }
 
-  .feat-card {
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 22px 20px;
-    transition: all .2s;
+  .white-card{
+    background:#fff; border:1.5px solid #e8edf5;
+    border-radius:14px; padding:20px 18px;
+  }
+  .white-card h3{ font-size:14px; font-weight:700; color:#0f172a; margin-bottom:12px; }
+
+  .dot-list{ list-style:none; }
+  .dot-list li{
+    display:flex; align-items:center; gap:9px;
+    font-size:11.5px; color:#475569;
+    padding:7px 0;
+    border-bottom:1px solid #f8fafc;
+    line-height:1.4;
+  }
+  .dot-list li:last-child{ border-bottom:none; }
+  .dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+  .stat-row{ display:flex; gap:10px; margin-bottom:12px; }
+  .mini-stat{
+    flex:1; background:#f8fafc; border:1.5px solid #e8edf5;
+    border-radius:10px; padding:12px 8px; text-align:center;
+  }
+  .mini-stat-num{ font-size:13px; font-weight:800; margin-bottom:2px; }
+  .mini-stat-label{ font-size:9.5px; color:#94a3b8; font-weight:500; }
+
+  /* attendance flow */
+  .flow-row{
+    display:flex; align-items:center; gap:0;
+    margin:16px 0; justify-content:space-between;
+  }
+  .flow-step{
+    text-align:center; flex:1;
+  }
+  .flow-icon{
+    width:44px; height:44px; border-radius:50%; margin:0 auto 6px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+    border:2px solid #e8edf5;
+    background:#f8fafc;
+  }
+  .flow-label{ font-size:10px; font-weight:600; color:#475569; }
+  .flow-arrow{ color:#cbd5e1; font-size:18px; margin:0 2px; flex-shrink:0; padding-bottom:16px; }
+
+  /* ════════════════════════════════════════
+     PAGE 4 · ACADEMIC + PORTALS
+  ════════════════════════════════════════ */
+  .dark-banner{
+    background:linear-gradient(145deg,#0f172a 0%,#1e293b 100%);
+    border-radius:16px; padding:28px 28px; color:#fff;
+    margin-bottom:18px; position:relative; overflow:hidden;
+  }
+  .dark-banner::before{
+    content:''; position:absolute;
+    top:-50px; right:-50px; width:180px; height:180px; border-radius:50%;
+    background:rgba(99,102,241,.12);
+  }
+  .dark-banner::after{
+    content:''; position:absolute;
+    bottom:-40px; left:-30px; width:130px; height:130px; border-radius:50%;
+    background:rgba(124,58,237,.1);
+  }
+  .dark-banner-inner{ position:relative; z-index:2; }
+  .dark-banner h3{ font-size:18px; font-weight:800; margin-bottom:6px; }
+  .dark-banner p{ font-size:12.5px; color:#94a3b8; max-width:460px; line-height:1.6; margin-bottom:14px; }
+  .dark-banner-tags{ display:flex; flex-wrap:wrap; gap:8px; }
+  .dtag{
+    background:rgba(99,102,241,.2); border:1px solid rgba(99,102,241,.3);
+    color:#a5b4fc; font-size:10.5px; font-weight:600;
+    padding:4px 12px; border-radius:6px;
   }
 
-  .feat-icon {
-    width: 44px; height: 44px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 14px;
-    font-size: 22px;
+  .three-col{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+
+  .mini-card{
+    background:#f8fafc; border:1.5px solid #e8edf5;
+    border-radius:12px; padding:18px 16px;
+  }
+  .mini-card .mc-icon{
+    font-size:22px; margin-bottom:8px;
+    width:40px; height:40px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    background:#eef2ff;
+  }
+  .mini-card h4{ font-size:13px; font-weight:700; color:#0f172a; margin-bottom:5px; }
+  .mini-card p{ font-size:11px; color:#64748b; line-height:1.55; }
+
+  /* role cards */
+  .role-strip{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+    margin-top:12px;
+  }
+  .role-card{
+    border-radius:10px; padding:14px 12px; text-align:center;
+  }
+  .role-card .r-icon{ font-size:22px; margin-bottom:6px; display:block; }
+  .role-card .r-name{ font-size:12px; font-weight:700; margin-bottom:3px; }
+  .role-card .r-desc{ font-size:10px; line-height:1.4; }
+
+  .rc-super{ background:#eef2ff; border:1.5px solid #c7d2fe; }
+  .rc-super .r-name{ color:#4f46e5; }
+  .rc-super .r-desc{ color:#6366f1; }
+
+  .rc-admin{ background:#f0fdf4; border:1.5px solid #bbf7d0; }
+  .rc-admin .r-name{ color:#16a34a; }
+  .rc-admin .r-desc{ color:#22c55e; }
+
+  .rc-teacher{ background:#fff7ed; border:1.5px solid #fed7aa; }
+  .rc-teacher .r-name{ color:#c2410c; }
+  .rc-teacher .r-desc{ color:#f97316; }
+
+  .rc-employee{ background:#fdf4ff; border:1.5px solid #e9d5ff; }
+  .rc-employee .r-name{ color:#9333ea; }
+  .rc-employee .r-desc{ color:#a855f7; }
+
+  /* ════════════════════════════════════════
+     PAGE 5 · TECH STACK
+  ════════════════════════════════════════ */
+  .tech-header{
+    background:linear-gradient(135deg,#0f172a,#1e1b4b);
+    border-radius:16px; padding:24px 28px;
+    display:grid; grid-template-columns:1fr auto;
+    gap:20px; align-items:center;
+    margin-bottom:18px; color:#fff;
+  }
+  .tech-header h3{ font-size:18px; font-weight:800; margin-bottom:4px; }
+  .tech-header p{ font-size:12px; color:#94a3b8; line-height:1.5; }
+  .tech-badge-list{ display:flex; flex-wrap:wrap; gap:6px; }
+  .tbadge{
+    background:rgba(99,102,241,.2); border:1px solid rgba(99,102,241,.35);
+    color:#a5b4fc; font-size:10px; font-weight:600;
+    padding:3px 10px; border-radius:6px;
   }
 
-  .feat-name { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
-  .feat-desc { font-size: 12.5px; color: #64748b; line-height: 1.55; }
+  .tech-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+    margin-bottom:18px;
+  }
+  .tech-tile{
+    background:#f8fafc; border:1.5px solid #e8edf5;
+    border-radius:10px; padding:14px 12px; text-align:center;
+  }
+  .tech-tile .t-icon{ font-size:22px; margin-bottom:6px; }
+  .tech-tile .t-name{ font-size:12px; font-weight:700; color:#0f172a; margin-bottom:2px; }
+  .tech-tile .t-role{ font-size:10px; color:#94a3b8; }
 
-  .ic-blue   { background: #dbeafe; }
-  .ic-purple { background: #ede9fe; }
-  .ic-green  { background: #dcfce7; }
-  .ic-orange { background: #ffedd5; }
-  .ic-pink   { background: #fce7f3; }
-  .ic-teal   { background: #ccfbf1; }
-  .ic-yellow { background: #fef9c3; }
-  .ic-red    { background: #fee2e2; }
-  .ic-indigo { background: #eef2ff; }
+  .arch-row{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    margin-bottom:18px;
+  }
+  .arch-item{
+    background:#fff; border:1.5px solid #e8edf5;
+    border-radius:10px; padding:14px 14px;
+    display:flex; align-items:flex-start; gap:10px;
+  }
+  .arch-num{
+    width:26px; height:26px; border-radius:8px; flex-shrink:0;
+    background:linear-gradient(135deg,#4f46e5,#7c3aed);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:11px; font-weight:700;
+  }
+  .arch-item h5{ font-size:12px; font-weight:700; color:#0f172a; margin-bottom:3px; }
+  .arch-item p{ font-size:10.5px; color:#64748b; line-height:1.45; }
 
-  /* ═══════════════════════════════════════════
-     PAGE 3 – HR & ATTENDANCE
-  ═══════════════════════════════════════════ */
-  .two-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 28px;
+  /* ════════════════════════════════════════
+     PAGE 6 · PRICING + CTA
+  ════════════════════════════════════════ */
+  .pricing-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:14px;
+    margin-bottom:20px;
   }
+  .price-card{
+    border:1.5px solid #e8edf5; border-radius:16px;
+    padding:22px 18px; background:#fff;
+    display:flex; flex-direction:column;
+  }
+  .price-card.featured{
+    border-color:#6366f1;
+    background:linear-gradient(180deg,#f5f3ff 0%,#fff 50%);
+    box-shadow:0 4px 24px rgba(99,102,241,.12);
+  }
+  .pc-badge{
+    display:inline-block; background:#6366f1; color:#fff;
+    font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    padding:3px 9px; border-radius:100px; margin-bottom:10px; align-self:flex-start;
+  }
+  .pc-name{ font-size:14px; font-weight:700; color:#0f172a; margin-bottom:4px; }
+  .pc-price{ font-size:30px; font-weight:900; color:#4f46e5; line-height:1; }
+  .pc-period{ font-size:11px; color:#94a3b8; margin-bottom:14px; }
+  .pc-list{ list-style:none; flex:1; }
+  .pc-list li{
+    font-size:11.5px; color:#475569;
+    padding:6px 0; border-bottom:1px solid #f8fafc;
+    display:flex; align-items:center; gap:7px;
+  }
+  .pc-list li:last-child{ border-bottom:none; }
+  .pc-list li::before{ content:'✓'; color:#22c55e; font-weight:700; font-size:11px; flex-shrink:0; }
 
-  .highlight-box {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    border-radius: 18px;
-    padding: 32px 28px;
-    color: #fff;
+  .cta-block{
+    background:linear-gradient(135deg,#4338ca 0%,#6d28d9 50%,#9333ea 100%);
+    border-radius:18px; padding:32px 36px;
+    color:#fff; text-align:center; position:relative; overflow:hidden;
   }
-  .highlight-box h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-  .highlight-box p  { font-size: 13.5px; color: rgba(255,255,255,.8); line-height: 1.6; margin-bottom: 20px; }
+  .cta-block::before{
+    content:''; position:absolute;
+    top:-60px; right:-60px; width:200px; height:200px; border-radius:50%;
+    background:rgba(255,255,255,.06);
+  }
+  .cta-block::after{
+    content:''; position:absolute;
+    bottom:-40px; left:-40px; width:140px; height:140px; border-radius:50%;
+    background:rgba(255,255,255,.04);
+  }
+  .cta-inner{ position:relative; z-index:2; }
+  .cta-block h2{ font-size:22px; font-weight:900; margin-bottom:8px; }
+  .cta-block p{ font-size:13px; color:rgba(255,255,255,.8); margin-bottom:20px; }
+  .cta-btns{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:18px; }
+  .btn-w{
+    background:#fff; color:#4f46e5;
+    padding:10px 24px; border-radius:9px;
+    font-size:13px; font-weight:700;
+  }
+  .btn-o{
+    background:transparent; border:2px solid rgba(255,255,255,.45); color:#fff;
+    padding:10px 24px; border-radius:9px;
+    font-size:13px; font-weight:700;
+  }
+  .cta-contacts{ display:flex; gap:24px; justify-content:center; flex-wrap:wrap; }
+  .cc{ font-size:12px; color:rgba(255,255,255,.7); }
+  .cc strong{ color:#fff; }
 
-  .list-check { list-style: none; }
-  .list-check li {
-    display: flex; align-items: flex-start; gap: 10px;
-    font-size: 13px; color: rgba(255,255,255,.85);
-    margin-bottom: 10px; line-height: 1.45;
-  }
-  .list-check li::before {
-    content: '✓';
-    flex-shrink: 0;
-    width: 18px; height: 18px;
-    background: rgba(255,255,255,.2);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700;
-    margin-top: 1px;
-  }
-
-  .info-box {
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 28px 24px;
-  }
-  .info-box h3 { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 16px; }
-
-  .stat-row {
-    display: flex; gap: 16px; margin-bottom: 16px;
-  }
-  .mini-stat {
-    flex: 1;
-    background: #fff;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 16px;
-    text-align: center;
-  }
-  .mini-stat-num   { font-size: 26px; font-weight: 800; color: #4f46e5; }
-  .mini-stat-label { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 3px; }
-
-  .feature-list-clean { list-style: none; }
-  .feature-list-clean li {
-    display: flex; align-items: center; gap: 10px;
-    font-size: 13px; color: #475569;
-    padding: 9px 0;
-    border-bottom: 1px solid #f1f5f9;
-    line-height: 1.4;
-  }
-  .feature-list-clean li:last-child { border-bottom: none; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-  /* ═══════════════════════════════════════════
-     PAGE 4 – ACADEMIC + PORTAL + MULTI-TENANT
-  ═══════════════════════════════════════════ */
-  .wide-highlight {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    border-radius: 18px;
-    padding: 36px 32px;
-    color: #fff;
-    margin-bottom: 24px;
-    position: relative;
-    overflow: hidden;
-  }
-  .wide-highlight::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -60px;
-    width: 200px; height: 200px;
-    border-radius: 50%;
-    background: rgba(99,102,241,.15);
-  }
-  .wide-highlight-inner { position: relative; z-index: 2; }
-  .wide-highlight h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-  .wide-highlight p  { font-size: 14px; color: #94a3b8; max-width: 500px; line-height: 1.6; }
-
-  .three-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-  }
-
-  .mini-card {
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 20px;
-  }
-  .mini-card-icon { font-size: 26px; margin-bottom: 10px; }
-  .mini-card h4 { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
-  .mini-card p  { font-size: 12px; color: #64748b; line-height: 1.5; }
-
-  /* ═══════════════════════════════════════════
-     PAGE 5 – TECH STACK + PRICING / CTA
-  ═══════════════════════════════════════════ */
-  .tech-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 32px;
-  }
-  .tech-pill {
-    background: #f1f5f9;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 14px;
-    text-align: center;
-  }
-  .tech-pill span { font-size: 13px; font-weight: 600; color: #334155; }
-  .tech-pill small { display: block; font-size: 11px; color: #94a3b8; margin-top: 3px; }
-
-  .pricing-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-
-  .price-card {
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 24px 20px;
-    text-align: center;
-    background: #fff;
-  }
-  .price-card.popular {
-    border-color: #6366f1;
-    background: linear-gradient(180deg, #eef2ff 0%, #fff 40%);
-  }
-  .price-badge {
-    display: inline-block;
-    background: #6366f1; color: #fff;
-    font-size: 10px; font-weight: 700;
-    padding: 3px 10px; border-radius: 100px;
-    margin-bottom: 10px;
-    letter-spacing: .06em;
-  }
-  .price-tier  { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
-  .price-amount{ font-size: 32px; font-weight: 900; color: #4f46e5; line-height: 1; }
-  .price-period{ font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
-  .price-list  { list-style: none; text-align: left; }
-  .price-list li {
-    font-size: 12px; color: #475569;
-    padding: 6px 0;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .price-list li:last-child { border-bottom: none; }
-  .price-list li::before { content: '✓'; color: #22c55e; font-weight: 700; flex-shrink: 0; }
-
-  .cta-box {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #a855f7 100%);
-    border-radius: 18px;
-    padding: 40px 36px;
-    text-align: center;
-    color: #fff;
-  }
-  .cta-box h2 { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
-  .cta-box p  { font-size: 15px; color: rgba(255,255,255,.8); margin-bottom: 28px; }
-  .cta-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-  .btn-white {
-    background: #fff; color: #4f46e5;
-    padding: 12px 28px; border-radius: 10px;
-    font-size: 14px; font-weight: 700;
-    text-decoration: none;
-  }
-  .btn-outline {
-    background: transparent;
-    border: 2px solid rgba(255,255,255,.5);
-    color: #fff;
-    padding: 12px 28px; border-radius: 10px;
-    font-size: 14px; font-weight: 700;
-    text-decoration: none;
-  }
-
-  .contact-row {
-    display: flex; gap: 24px; justify-content: center;
-    margin-top: 20px;
-  }
-  .contact-item { color: rgba(255,255,255,.7); font-size: 13px; }
-  .contact-item strong { color: #fff; }
-
-  /* page number */
-  .pgnum {
-    position: absolute; bottom: 24px; right: 36px;
-    font-size: 11px; color: #94a3b8;
-  }
-  .pg-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 24px;
-    margin-bottom: 28px;
-    border-bottom: 1.5px solid #f1f5f9;
-  }
-  .pg-header .logo-sm {
-    display: flex; align-items: center; gap: 10px;
-  }
-  .pg-header .logo-sm .icon {
-    width: 34px; height: 34px;
-    border-radius: 9px;
-    background: linear-gradient(135deg,#6366f1,#818cf8);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 13px; font-weight: 800;
-  }
-  .pg-header .logo-sm span { font-size: 16px; font-weight: 700; color: #0f172a; }
-  .pg-header .pg-label { font-size: 12px; color: #94a3b8; font-weight: 500; }
 </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════
-     PAGE 1  ·  COVER
-════════════════════════════════════════ -->
+<!-- ═══════════════════════════════
+     PAGE 1 · COVER
+═══════════════════════════════ -->
 <div class="page cover">
-  <div class="cover-inner">
-    <div class="logo-badge">
-      <div class="logo-icon">AT</div>
-      <div class="logo-text">
-        <h1>ApexTime</h1>
-        <p>Cloud Platform</p>
-      </div>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+
+  <div class="cover-nav">
+    <div class="cover-logo-icon">AT</div>
+    <div class="cover-logo-text">
+      <h1>ApexTime Cloud</h1>
+      <p>School ERP Platform</p>
+    </div>
+  </div>
+
+  <div class="cover-body">
+    <div class="cover-super">
+      <span class="cover-super-dot"></span>
+      Next-Generation School Management
     </div>
 
-    <p class="cover-tagline">
-      The <strong>All-in-One School ERP</strong> built for modern educational institutions —
-      manage staff, students, attendance and academics from a single, beautiful platform.
+    <div class="cover-h1">
+      The Smarter Way<br/>to Run <span class="accent">Schools.</span>
+    </div>
+
+    <p class="cover-sub">
+      One <strong>unified cloud platform</strong> for HR, attendance, academics, and self-service —
+      built for modern educational institutions of every size.
     </p>
 
-    <div class="cover-pills">
-      <span class="pill">👥 Employee Management</span>
-      <span class="pill">🎓 Academic Structure</span>
-      <span class="pill">⏱ Biometric Attendance</span>
-      <span class="pill">📋 Leave & Approvals</span>
-      <span class="pill">📊 Live Reports</span>
-      <span class="pill">📢 Announcements</span>
-      <span class="pill">🏢 Multi-Tenant</span>
-      <span class="pill">📱 Employee Self-Service</span>
+    <div class="cover-tags">
+      <span class="tag">👥 Employee Management</span>
+      <span class="tag">🎓 Academic Structure</span>
+      <span class="tag">⏱ Biometric Attendance</span>
+      <span class="tag">📋 Leave &amp; Approvals</span>
+      <span class="tag">📊 Live Analytics</span>
+      <span class="tag">📢 Announcements</span>
+      <span class="tag">🏢 Multi-Tenant</span>
+      <span class="tag">📱 Employee Self-Service</span>
+      <span class="tag">🔒 Role-Based Access</span>
+      <span class="tag">🖥 Device Management</span>
     </div>
 
     <div class="cover-stats">
@@ -463,7 +558,7 @@
       </div>
       <div class="cstat">
         <div class="cstat-num">∞</div>
-        <div class="cstat-label">Multi-Tenant Ready</div>
+        <div class="cstat-label">Multi-Tenant</div>
       </div>
       <div class="cstat">
         <div class="cstat-num">100%</div>
@@ -475,147 +570,163 @@
       </div>
     </div>
   </div>
-  <div class="cover-url">apextime.cloud</div>
+
+  <div class="cover-bottom">
+    <span class="cover-bottom-left">Confidential · For authorised use only</span>
+    <span class="cover-url">apextime.cloud</span>
+  </div>
 </div>
 
 
-<!-- ════════════════════════════════════════
-     PAGE 2  ·  FEATURES OVERVIEW
-════════════════════════════════════════ -->
-<div class="page" style="position:relative;">
-  <div class="page-inner">
-    <div class="pg-header">
-      <div class="logo-sm">
-        <div class="icon">AT</div>
-        <span>ApexTime Cloud</span>
-      </div>
-      <span class="pg-label">PRODUCT OVERVIEW</span>
-    </div>
+<!-- ═══════════════════════════════
+     PAGE 2 · FEATURES OVERVIEW
+═══════════════════════════════ -->
+<div class="page">
+  <div class="pg-header">
+    <div class="logo-sm"><div class="icon">AT</div><span>ApexTime Cloud</span></div>
+    <span class="pg-label">Product Overview</span>
+  </div>
 
-    <span class="section-badge">Everything You Need</span>
-    <h2 class="section-title">Powerful Modules.<br/>One Unified Platform.</h2>
-    <p class="section-sub">
-      ApexTime Cloud delivers a complete suite of tools to streamline every aspect of your institution's operations — from hire to retire, admission to graduation.
-    </p>
+  <div class="page-body">
+    <div class="eyebrow"><span class="eyebrow-dot"></span>Everything You Need</div>
+    <div class="h2">Powerful Modules. One Unified Platform.</div>
+    <p class="lead">A complete suite of tools to streamline every aspect of your institution — from hire to retire, admission to graduation.</p>
 
     <div class="feat-grid">
 
-      <div class="feat-card">
-        <div class="feat-icon ic-blue">👥</div>
+      <div class="feat-card c-blue">
+        <div class="feat-icon-wrap fi-blue">👥</div>
         <div class="feat-name">Employee Management</div>
-        <div class="feat-desc">Manage employee profiles, codes, departments, designations, categories, joining dates and credentials in one place.</div>
+        <div class="feat-desc">Manage profiles, departments, designations, categories, joining dates and credentials in one place.</div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon ic-purple">🎓</div>
+      <div class="feat-card c-purple">
+        <div class="feat-icon-wrap fi-purple">🎓</div>
         <div class="feat-name">Academic Structure</div>
-        <div class="feat-desc">Define programmes, courses, semesters, divisions and batches. Flexible hierarchy fits any school or college structure.</div>
+        <div class="feat-desc">Define programmes, courses, semesters, divisions and batches. Flexible hierarchy for any institution.</div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon ic-green">⏱</div>
-        <div class="feat-name">Attendance & Timesheets</div>
-        <div class="feat-desc">Real-time timesheet tracking with GPS-based punch-in/punch-out, selfie verification, and device integration.</div>
+      <div class="feat-card c-green">
+        <div class="feat-icon-wrap fi-green">⏱</div>
+        <div class="feat-name">Attendance &amp; Timesheets</div>
+        <div class="feat-desc">GPS-based punch-in/out with selfie verification and biometric device integration in real-time.</div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon ic-orange">🕐</div>
+      <div class="feat-card c-orange">
+        <div class="feat-icon-wrap fi-orange">🕐</div>
         <div class="feat-name">Work Shifts</div>
-        <div class="feat-desc">Create flexible work shift schedules — set start/end times, grace periods, and late mark rules per shift.</div>
+        <div class="feat-desc">Create flexible shift schedules with start/end times, grace periods, and late-mark rules per shift.</div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon ic-pink">📋</div>
+      <div class="feat-card c-pink">
+        <div class="feat-icon-wrap fi-pink">📋</div>
         <div class="feat-name">Leave Management</div>
-        <div class="feat-desc">Configure leave types, quotas and approval chains. Employees apply, managers approve — all digitally tracked.</div>
+        <div class="feat-desc">Configure leave types, quotas and approval chains. Employees apply, managers approve — all digital.</div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon ic-teal">✅</div>
+      <div class="feat-card c-teal">
+        <div class="feat-icon-wrap fi-teal">✅</div>
         <div class="feat-name">Approval Workflows</div>
-        <div class="feat-desc">Centralised approval hub for overtime, comp-off, and attendance corrections. Status tracking at every step.</div>
+        <div class="feat-desc">Centralised hub for overtime, comp-off and attendance corrections with step-by-step status tracking.</div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon ic-yellow">📊</div>
-        <div class="feat-name">Reports & Analytics</div>
-        <div class="feat-desc">Attendance reports, leave summaries and custom exports. Filter by date, department and employee instantly.</div>
+      <div class="feat-card c-yellow">
+        <div class="feat-icon-wrap fi-yellow">📊</div>
+        <div class="feat-name">Reports &amp; Analytics</div>
+        <div class="feat-desc">Attendance reports, leave summaries and custom exports. Filter by date, department or employee.</div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon ic-red">📢</div>
+      <div class="feat-card c-red">
+        <div class="feat-icon-wrap fi-red">📢</div>
         <div class="feat-name">Announcements</div>
-        <div class="feat-desc">Broadcast institution-wide or targeted announcements visible to staff and teachers on their portal.</div>
+        <div class="feat-desc">Broadcast institution-wide or targeted notices visible to staff on their self-service portal.</div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon ic-indigo">🏢</div>
+      <div class="feat-card c-indigo">
+        <div class="feat-icon-wrap fi-indigo">🏢</div>
         <div class="feat-name">Multi-Organisation</div>
-        <div class="feat-desc">Super-admin manages multiple schools/tenants from a single dashboard. Perfect for education groups and trusts.</div>
+        <div class="feat-desc">Super-admin manages multiple schools from a single dashboard. Ideal for education groups &amp; trusts.</div>
       </div>
 
     </div>
   </div>
-  <div class="pgnum">2</div>
+
+  <div class="pg-footer">
+    <span class="pg-footer-brand">apextime.cloud</span>
+    <span class="pg-num">2 / 6</span>
+  </div>
 </div>
 
 
-<!-- ════════════════════════════════════════
-     PAGE 3  ·  HR & ATTENDANCE DEEP DIVE
-════════════════════════════════════════ -->
-<div class="page" style="position:relative;">
-  <div class="page-inner">
-    <div class="pg-header">
-      <div class="logo-sm">
-        <div class="icon">AT</div>
-        <span>ApexTime Cloud</span>
+<!-- ═══════════════════════════════
+     PAGE 3 · HR & ATTENDANCE
+═══════════════════════════════ -->
+<div class="page">
+  <div class="pg-header">
+    <div class="logo-sm"><div class="icon">AT</div><span>ApexTime Cloud</span></div>
+    <span class="pg-label">HR &amp; Attendance</span>
+  </div>
+
+  <div class="page-body">
+    <div class="eyebrow"><span class="eyebrow-dot"></span>Staff Management</div>
+    <div class="h2">Smart HR Built for Schools</div>
+    <p class="lead" style="margin-bottom:18px;">Handle every step of the employee lifecycle — from onboarding to daily attendance to leave approvals.</p>
+
+    <!-- Attendance flow -->
+    <div class="flow-row">
+      <div class="flow-step">
+        <div class="flow-icon">📲</div>
+        <div class="flow-label">Open Portal</div>
       </div>
-      <span class="pg-label">HR & ATTENDANCE</span>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon">📍</div>
+        <div class="flow-label">GPS Verified</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon">🤳</div>
+        <div class="flow-label">Selfie Captured</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon">✅</div>
+        <div class="flow-label">Punch Recorded</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon">📊</div>
+        <div class="flow-label">Dashboard Updated</div>
+      </div>
     </div>
 
-    <span class="section-badge">Staff Management</span>
-    <h2 class="section-title">Smart HR Built for Schools</h2>
-    <p class="section-sub">Handle every step of the employee lifecycle with precision — from onboarding to daily attendance to leave management.</p>
-
-    <div class="two-col" style="flex:1;">
-      <div class="highlight-box">
+    <div class="split-2">
+      <div class="gradient-card">
         <h3>⏱ Attendance System</h3>
         <p>GPS-verified, selfie-authenticated punch-in/out tied directly to biometric devices or the employee's mobile browser.</p>
-        <ul class="list-check">
-          <li>Real-time GPS location capture on every punch</li>
-          <li>Mandatory selfie photo for punch verification</li>
-          <li>Biometric device integration (fingerprint/face)</li>
-          <li>Configurable work shifts with grace periods</li>
-          <li>Late, absent & present auto-calculation</li>
-          <li>Manual correction with approval workflow</li>
-          <li>Comp-off management for extra work days</li>
-          <li>Monthly timesheet view per employee</li>
+        <ul class="check-list">
+          <li><span class="ck">✓</span>Real-time GPS location on every punch</li>
+          <li><span class="ck">✓</span>Mandatory selfie for punch verification</li>
+          <li><span class="ck">✓</span>Biometric device integration (fingerprint/face)</li>
+          <li><span class="ck">✓</span>Configurable shifts with grace periods</li>
+          <li><span class="ck">✓</span>Late, absent &amp; present auto-calculation</li>
+          <li><span class="ck">✓</span>Manual correction with approval workflow</li>
+          <li><span class="ck">✓</span>Comp-off management for extra work days</li>
+          <li><span class="ck">✓</span>Monthly timesheet view per employee</li>
         </ul>
       </div>
 
-      <div style="display:flex; flex-direction:column; gap:16px;">
-        <div class="info-box">
-          <h3>📋 Leave Management</h3>
-          <ul class="feature-list-clean">
-            <li><span class="dot" style="background:#6366f1;"></span>Multiple configurable leave types (CL, SL, EL…)</li>
-            <li><span class="dot" style="background:#22c55e;"></span>Per-employee leave quota tracking</li>
-            <li><span class="dot" style="background:#f59e0b;"></span>Multi-day leave range requests</li>
-            <li><span class="dot" style="background:#ef4444;"></span>Approval / rejection with reason</li>
-            <li><span class="dot" style="background:#3b82f6;"></span>Leave balance auto-deduction</li>
-            <li><span class="dot" style="background:#a855f7;"></span>Leave history per employee</li>
-          </ul>
-        </div>
-
-        <div class="info-box">
-          <h3>📊 Live Dashboard Stats</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="white-card">
+          <h3>📊 Live Dashboard</h3>
           <div class="stat-row">
             <div class="mini-stat">
-              <div class="mini-stat-num" style="color:#6366f1;">Present</div>
+              <div class="mini-stat-num" style="color:#22c55e;">Present</div>
               <div class="mini-stat-label">Today's count</div>
             </div>
             <div class="mini-stat">
               <div class="mini-stat-num" style="color:#ef4444;">Absent</div>
-              <div class="mini-stat-label">Instant visibility</div>
+              <div class="mini-stat-label">Instant view</div>
             </div>
             <div class="mini-stat">
               <div class="mini-stat-num" style="color:#f59e0b;">Pending</div>
@@ -623,165 +734,371 @@
             </div>
           </div>
         </div>
+
+        <div class="white-card">
+          <h3>📋 Leave Management</h3>
+          <ul class="dot-list">
+            <li><span class="dot" style="background:#6366f1;"></span>Multiple leave types (CL, SL, EL, etc.)</li>
+            <li><span class="dot" style="background:#22c55e;"></span>Per-employee leave quota tracking</li>
+            <li><span class="dot" style="background:#f59e0b;"></span>Multi-day range leave requests</li>
+            <li><span class="dot" style="background:#ef4444;"></span>Approval / rejection with reasons</li>
+            <li><span class="dot" style="background:#3b82f6;"></span>Leave balance auto-deduction</li>
+            <li><span class="dot" style="background:#a855f7;"></span>Full leave history per employee</li>
+          </ul>
+        </div>
+
+        <div class="white-card" style="padding:14px 18px;">
+          <h3>⚙️ Shift Configuration</h3>
+          <ul class="dot-list">
+            <li><span class="dot" style="background:#14b8a6;"></span>Multiple shift types per institution</li>
+            <li><span class="dot" style="background:#f97316;"></span>Grace period &amp; late-mark rules</li>
+            <li><span class="dot" style="background:#8b5cf6;"></span>Assign shifts per employee group</li>
+          </ul>
+        </div>
       </div>
     </div>
-
   </div>
-  <div class="pgnum">3</div>
+
+  <div class="pg-footer">
+    <span class="pg-footer-brand">apextime.cloud</span>
+    <span class="pg-num">3 / 6</span>
+  </div>
 </div>
 
 
-<!-- ════════════════════════════════════════
-     PAGE 4  ·  ACADEMIC + PORTAL + DEVICES
-════════════════════════════════════════ -->
-<div class="page" style="position:relative;">
-  <div class="page-inner">
-    <div class="pg-header">
-      <div class="logo-sm">
-        <div class="icon">AT</div>
-        <span>ApexTime Cloud</span>
-      </div>
-      <span class="pg-label">ACADEMIC & SELF-SERVICE</span>
-    </div>
+<!-- ═══════════════════════════════
+     PAGE 4 · ACADEMIC & PORTALS
+═══════════════════════════════ -->
+<div class="page">
+  <div class="pg-header">
+    <div class="logo-sm"><div class="icon">AT</div><span>ApexTime Cloud</span></div>
+    <span class="pg-label">Academic &amp; Self-Service</span>
+  </div>
 
-    <span class="section-badge">Beyond HR</span>
-    <h2 class="section-title">Academics, Devices & Self-Service</h2>
-    <p class="section-sub">A complete ecosystem — track students, manage hardware, and empower every employee with a personal portal.</p>
+  <div class="page-body">
+    <div class="eyebrow"><span class="eyebrow-dot"></span>Beyond HR</div>
+    <div class="h2">Academics, Devices &amp; Self-Service</div>
+    <p class="lead" style="margin-bottom:16px;">A complete ecosystem — manage the full academic hierarchy, hardware devices, and empower every user with a personal portal.</p>
 
-    <div class="wide-highlight">
-      <div class="wide-highlight-inner">
+    <div class="dark-banner">
+      <div class="dark-banner-inner">
         <h3>🎓 Academic Structure Management</h3>
-        <p>Define and manage your institution's complete academic hierarchy — programmes, courses, semesters, divisions, and batches — with full student enrolment tracking and batch filtering.</p>
+        <p>Define and manage your institution's complete academic hierarchy — programmes, courses, semesters, divisions, and batches — with full student enrolment tracking and intelligent batch filtering.</p>
+        <div class="dark-banner-tags">
+          <span class="dtag">Programmes</span>
+          <span class="dtag">Courses</span>
+          <span class="dtag">Semesters</span>
+          <span class="dtag">Divisions</span>
+          <span class="dtag">Batches</span>
+          <span class="dtag">Student Enrolment</span>
+          <span class="dtag">Batch Filtering</span>
+        </div>
       </div>
     </div>
 
-    <div class="three-col" style="margin-bottom:20px;">
+    <div class="three-col" style="margin-bottom:14px;">
       <div class="mini-card">
-        <div class="mini-card-icon">👨‍💼</div>
-        <h4>Employee Self-Service Portal</h4>
-        <p>Every employee gets a personal dashboard — view schedule, punch attendance, apply for leave, and read announcements from any device.</p>
+        <div class="mc-icon">👨‍💼</div>
+        <h4>Employee Self-Service</h4>
+        <p>Every employee gets a personal dashboard — view schedule, punch attendance, apply for leave, and read announcements.</p>
       </div>
       <div class="mini-card">
-        <div class="mini-card-icon">📱</div>
+        <div class="mc-icon">📱</div>
         <h4>GPS + Selfie Punch</h4>
-        <p>Employees use their phone to punch in/out with live location and selfie — no physical device needed on the go.</p>
+        <p>Employees punch in/out from their phone with live location and selfie capture — no physical device needed on the go.</p>
       </div>
       <div class="mini-card">
-        <div class="mini-card-icon">💾</div>
+        <div class="mc-icon">💾</div>
         <h4>Device Management</h4>
         <p>Register and monitor biometric attendance devices across multiple sites. Active device count visible on the admin dashboard.</p>
       </div>
     </div>
 
-    <div class="three-col">
+    <div class="three-col" style="margin-bottom:14px;">
       <div class="mini-card">
-        <div class="mini-card-icon">🏫</div>
+        <div class="mc-icon">🏫</div>
         <h4>Student Management</h4>
-        <p>Maintain student profiles with admission numbers, batch assignments, contact info, and gender — fully searchable and filterable.</p>
+        <p>Maintain student profiles with admission numbers, batch assignments, and contact info — fully searchable and filterable.</p>
       </div>
       <div class="mini-card">
-        <div class="mini-card-icon">📢</div>
-        <h4>Institution Announcements</h4>
-        <p>Publish notices and updates visible to staff instantly through the self-service portal. Keep everyone aligned.</p>
+        <div class="mc-icon">📢</div>
+        <h4>Institution Notices</h4>
+        <p>Publish announcements visible to all staff instantly through the self-service portal. Keep everyone aligned in real time.</p>
       </div>
       <div class="mini-card">
-        <div class="mini-card-icon">🔒</div>
+        <div class="mc-icon">🔒</div>
         <h4>Role-Based Access</h4>
-        <p>Super admin, admin, teacher, and employee roles — each with precisely scoped permissions and dedicated views.</p>
+        <p>Super Admin, Admin, Teacher and Employee roles — each with precisely scoped permissions and dedicated views.</p>
+      </div>
+    </div>
+
+    <!-- Role cards -->
+    <div class="role-strip">
+      <div class="role-card rc-super">
+        <span class="r-icon">👑</span>
+        <div class="r-name">Super Admin</div>
+        <div class="r-desc">Full multi-tenant control</div>
+      </div>
+      <div class="role-card rc-admin">
+        <span class="r-icon">🛡</span>
+        <div class="r-name">Admin</div>
+        <div class="r-desc">Institution management</div>
+      </div>
+      <div class="role-card rc-teacher">
+        <span class="r-icon">👩‍🏫</span>
+        <div class="r-name">Teacher</div>
+        <div class="r-desc">Class &amp; schedule access</div>
+      </div>
+      <div class="role-card rc-employee">
+        <span class="r-icon">👤</span>
+        <div class="r-name">Employee</div>
+        <div class="r-desc">Self-service portal</div>
       </div>
     </div>
 
   </div>
-  <div class="pgnum">4</div>
+
+  <div class="pg-footer">
+    <span class="pg-footer-brand">apextime.cloud</span>
+    <span class="pg-num">4 / 6</span>
+  </div>
 </div>
 
 
-<!-- ════════════════════════════════════════
-     PAGE 5  ·  TECH + PRICING + CTA
-════════════════════════════════════════ -->
-<div class="page" style="position:relative; page-break-after: avoid;">
-  <div class="page-inner">
-    <div class="pg-header">
-      <div class="logo-sm">
-        <div class="icon">AT</div>
-        <span>ApexTime Cloud</span>
-      </div>
-      <span class="pg-label">TECHNOLOGY & PRICING</span>
-    </div>
+<!-- ═══════════════════════════════
+     PAGE 5 · TECHNOLOGY
+═══════════════════════════════ -->
+<div class="page">
+  <div class="pg-header">
+    <div class="logo-sm"><div class="icon">AT</div><span>ApexTime Cloud</span></div>
+    <span class="pg-label">Technology</span>
+  </div>
 
-    <span class="section-badge">Enterprise-Grade Tech</span>
-    <h2 class="section-title" style="margin-bottom:6px;">Built to Scale. Secure by Design.</h2>
-    <p class="section-sub" style="margin-bottom:20px;">Modern, cloud-native architecture with containerised deployment and a secure multi-tenant data model.</p>
+  <div class="page-body">
+    <div class="eyebrow"><span class="eyebrow-dot"></span>Enterprise-Grade Tech</div>
+    <div class="h2">Built to Scale. Secure by Design.</div>
+    <p class="lead" style="margin-bottom:18px;">Modern, cloud-native architecture with containerised deployment, secure multi-tenant data isolation, and a robust REST API layer.</p>
+
+    <div class="tech-header">
+      <div>
+        <h3>Modern Full-Stack Architecture</h3>
+        <p>Every layer is production-hardened — from the React frontend to the Dockerised Node.js API and PostgreSQL database with Prisma ORM.</p>
+      </div>
+      <div class="tech-badge-list">
+        <span class="tbadge">Docker</span>
+        <span class="tbadge">Multi-Tenant</span>
+        <span class="tbadge">REST API</span>
+        <span class="tbadge">JWT Auth</span>
+      </div>
+    </div>
 
     <div class="tech-grid">
-      <div class="tech-pill"><span>React 18</span><small>Frontend UI</small></div>
-      <div class="tech-pill"><span>Node.js</span><small>API Backend</small></div>
-      <div class="tech-pill"><span>PostgreSQL</span><small>Database</small></div>
-      <div class="tech-pill"><span>Prisma ORM</span><small>Data Layer</small></div>
-      <div class="tech-pill"><span>Docker</span><small>Containerised</small></div>
-      <div class="tech-pill"><span>Nginx</span><small>Reverse Proxy</small></div>
-      <div class="tech-pill"><span>JWT Auth</span><small>Secure Sessions</small></div>
-      <div class="tech-pill"><span>REST API</span><small>Integrations</small></div>
+      <div class="tech-tile">
+        <div class="t-icon">⚛️</div>
+        <div class="t-name">React 18</div>
+        <div class="t-role">Frontend UI</div>
+      </div>
+      <div class="tech-tile">
+        <div class="t-icon">🟩</div>
+        <div class="t-name">Node.js</div>
+        <div class="t-role">API Backend</div>
+      </div>
+      <div class="tech-tile">
+        <div class="t-icon">🐘</div>
+        <div class="t-name">PostgreSQL</div>
+        <div class="t-role">Database</div>
+      </div>
+      <div class="tech-tile">
+        <div class="t-icon">🔷</div>
+        <div class="t-name">Prisma ORM</div>
+        <div class="t-role">Data Layer</div>
+      </div>
+      <div class="tech-tile">
+        <div class="t-icon">🐳</div>
+        <div class="t-name">Docker</div>
+        <div class="t-role">Containerised</div>
+      </div>
+      <div class="tech-tile">
+        <div class="t-icon">🔀</div>
+        <div class="t-name">Nginx</div>
+        <div class="t-role">Reverse Proxy</div>
+      </div>
+      <div class="tech-tile">
+        <div class="t-icon">🔐</div>
+        <div class="t-name">JWT Auth</div>
+        <div class="t-role">Secure Sessions</div>
+      </div>
+      <div class="tech-tile">
+        <div class="t-icon">🔗</div>
+        <div class="t-name">REST API</div>
+        <div class="t-role">Integrations</div>
+      </div>
     </div>
 
+    <div class="arch-row">
+      <div class="arch-item">
+        <div class="arch-num">01</div>
+        <div>
+          <h5>Multi-Tenant Isolation</h5>
+          <p>Each school's data is logically isolated — no cross-tenant data leakage, ever.</p>
+        </div>
+      </div>
+      <div class="arch-item">
+        <div class="arch-num">02</div>
+        <div>
+          <h5>Role-Based Permissions</h5>
+          <p>Every API endpoint is guarded by JWT + role checks. Fine-grained access control.</p>
+        </div>
+      </div>
+      <div class="arch-item">
+        <div class="arch-num">03</div>
+        <div>
+          <h5>Containerised Deployment</h5>
+          <p>One-command Docker Compose deployment on any cloud provider or on-premise server.</p>
+        </div>
+      </div>
+      <div class="arch-item">
+        <div class="arch-num">04</div>
+        <div>
+          <h5>Real-Time GPS Tracking</h5>
+          <p>Location and selfie captured at punch time — stored immutably per attendance record.</p>
+        </div>
+      </div>
+      <div class="arch-item">
+        <div class="arch-num">05</div>
+        <div>
+          <h5>Biometric Integration</h5>
+          <p>Native support for fingerprint and face-recognition devices via device management API.</p>
+        </div>
+      </div>
+      <div class="arch-item">
+        <div class="arch-num">06</div>
+        <div>
+          <h5>Scalable Architecture</h5>
+          <p>Stateless API + connection pooling — scales horizontally as your institution grows.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security highlights -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+      <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:4px;">🔒</div>
+        <div style="font-size:11px;font-weight:700;color:#16a34a;">HTTPS Only</div>
+        <div style="font-size:10px;color:#4ade80;">End-to-end encryption</div>
+      </div>
+      <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:4px;">🛡️</div>
+        <div style="font-size:11px;font-weight:700;color:#1d4ed8;">Helmet.js</div>
+        <div style="font-size:10px;color:#60a5fa;">Security headers</div>
+      </div>
+      <div style="background:#fdf4ff;border:1.5px solid #e9d5ff;border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:4px;">🔑</div>
+        <div style="font-size:11px;font-weight:700;color:#9333ea;">bcrypt Hashing</div>
+        <div style="font-size:10px;color:#c084fc;">Password security</div>
+      </div>
+      <div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:4px;">📝</div>
+        <div style="font-size:11px;font-weight:700;color:#c2410c;">Audit Logs</div>
+        <div style="font-size:10px;color:#fb923c;">Full activity trail</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="pg-footer">
+    <span class="pg-footer-brand">apextime.cloud</span>
+    <span class="pg-num">5 / 6</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════
+     PAGE 6 · PRICING + CTA
+═══════════════════════════════ -->
+<div class="page">
+  <div class="pg-header">
+    <div class="logo-sm"><div class="icon">AT</div><span>ApexTime Cloud</span></div>
+    <span class="pg-label">Pricing &amp; Get Started</span>
+  </div>
+
+  <div class="page-body">
+    <div class="eyebrow"><span class="eyebrow-dot"></span>Simple, Transparent Pricing</div>
+    <div class="h2">Choose the Right Plan for Your School</div>
+    <p class="lead" style="margin-bottom:20px;">No hidden fees. No long-term lock-in. Start with what you need and scale as you grow.</p>
+
     <div class="pricing-grid">
+
       <div class="price-card">
-        <div class="price-tier">Starter</div>
-        <div class="price-amount">₹4,999</div>
-        <div class="price-period">per month · 1 school</div>
-        <ul class="price-list">
+        <div class="pc-name">Starter</div>
+        <div class="pc-price">₹4,999</div>
+        <div class="pc-period">per month · 1 school</div>
+        <ul class="pc-list">
           <li>Up to 100 employees</li>
           <li>Up to 500 students</li>
           <li>All core HR modules</li>
-          <li>Employee portal</li>
+          <li>Leave management</li>
+          <li>Employee self-service portal</li>
+          <li>Attendance reports</li>
           <li>Email support</li>
         </ul>
       </div>
 
-      <div class="price-card popular">
-        <div class="price-badge">MOST POPULAR</div>
-        <div class="price-tier">Professional</div>
-        <div class="price-amount">₹9,999</div>
-        <div class="price-period">per month · 1 school</div>
-        <ul class="price-list">
+      <div class="price-card featured">
+        <div class="pc-badge">MOST POPULAR</div>
+        <div class="pc-name">Professional</div>
+        <div class="pc-price">₹9,999</div>
+        <div class="pc-period">per month · 1 school</div>
+        <ul class="pc-list">
           <li>Unlimited employees</li>
           <li>Unlimited students</li>
-          <li>All modules + devices</li>
+          <li>All modules + device mgmt</li>
           <li>Biometric integration</li>
+          <li>GPS + selfie attendance</li>
+          <li>Advanced analytics</li>
           <li>Priority support</li>
         </ul>
       </div>
 
       <div class="price-card">
-        <div class="price-tier">Enterprise</div>
-        <div class="price-amount">Custom</div>
-        <div class="price-period">multi-school group</div>
-        <ul class="price-list">
+        <div class="pc-name">Enterprise</div>
+        <div class="pc-price" style="font-size:24px;padding-top:6px;">Custom</div>
+        <div class="pc-period">multi-school group</div>
+        <ul class="pc-list">
           <li>Unlimited organisations</li>
           <li>Super admin panel</li>
           <li>Custom integrations</li>
+          <li>White-label options</li>
           <li>SLA guarantee</li>
-          <li>Dedicated support</li>
+          <li>Dedicated account manager</li>
+          <li>On-site training</li>
         </ul>
       </div>
+
     </div>
 
-    <div class="cta-box">
-      <h2>Ready to Transform Your Institution?</h2>
-      <p>Join schools already running smarter with ApexTime Cloud. Get a free demo today.</p>
-      <div class="cta-buttons">
-        <span class="btn-white">📅 Book a Free Demo</span>
-        <span class="btn-outline">🌐 apextime.cloud</span>
-      </div>
-      <div class="contact-row">
-        <span class="contact-item">📧 <strong>hello@apextime.cloud</strong></span>
-        <span class="contact-item">📞 <strong>+91 98765 43210</strong></span>
-        <span class="contact-item">🌐 <strong>apextime.cloud</strong></span>
+    <div class="cta-block">
+      <div class="cta-inner">
+        <h2>Ready to Transform Your Institution?</h2>
+        <p>Join schools already running smarter with ApexTime Cloud. Book a personalised demo today — it's free.</p>
+        <div class="cta-btns">
+          <span class="btn-w">📅 Book a Free Demo</span>
+          <span class="btn-o">🌐 Visit apextime.cloud</span>
+        </div>
+        <div class="cta-contacts">
+          <span class="cc">📧 <strong>hello@apextime.cloud</strong></span>
+          <span class="cc">📞 <strong>+91 98765 43210</strong></span>
+          <span class="cc">🌐 <strong>apextime.cloud</strong></span>
+        </div>
       </div>
     </div>
 
   </div>
-  <div class="pgnum">5</div>
+
+  <div class="pg-footer">
+    <span class="pg-footer-brand">apextime.cloud</span>
+    <span class="pg-num">6 / 6</span>
+  </div>
 </div>
 
 </body>
