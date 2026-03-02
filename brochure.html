@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ApexTime Cloud – School ERP Brochure</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    background: #fff;
+    color: #1e293b;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── PAGE SETTINGS ── */
+  @page { size: A4; margin: 0; }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    page-break-after: always;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ═══════════════════════════════════════════
+     PAGE 1 – COVER
+  ═══════════════════════════════════════════ */
+  .cover {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 70%, #4f46e5 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* decorative circles */
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: rgba(99,102,241,.18);
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: -100px; left: -100px;
+    width: 350px; height: 350px;
+    border-radius: 50%;
+    background: rgba(129,140,248,.12);
+  }
+
+  .cover-inner { position: relative; z-index: 2; }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .logo-icon {
+    width: 72px; height: 72px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 900; color: #fff;
+    box-shadow: 0 8px 32px rgba(99,102,241,.5);
+  }
+  .logo-text h1 { font-size: 42px; font-weight: 800; color: #fff; line-height: 1; }
+  .logo-text p  { font-size: 16px; color: #a5b4fc; margin-top: 4px; font-weight: 500; }
+
+  .cover-tagline {
+    font-size: 22px;
+    font-weight: 300;
+    color: #c7d2fe;
+    max-width: 520px;
+    line-height: 1.5;
+    margin-bottom: 48px;
+  }
+  .cover-tagline strong { color: #fff; font-weight: 700; }
+
+  .cover-pills {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    justify-content: center;
+    margin-bottom: 64px;
+  }
+  .pill {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #e0e7ff;
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+  }
+
+  .cover-stats {
+    display: flex; gap: 48px;
+    justify-content: center;
+    border-top: 1px solid rgba(255,255,255,.15);
+    padding-top: 40px;
+  }
+  .cstat { text-align: center; }
+  .cstat-num  { font-size: 36px; font-weight: 800; color: #fff; }
+  .cstat-label{ font-size: 13px; color: #a5b4fc; font-weight: 500; margin-top: 4px; }
+
+  .cover-url {
+    position: absolute; bottom: 28px; right: 36px;
+    color: rgba(255,255,255,.4);
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 2;
+  }
+
+  /* ═══════════════════════════════════════════
+     PAGE 2 – FEATURES OVERVIEW
+  ═══════════════════════════════════════════ */
+  .page-inner {
+    padding: 52px 48px;
+    min-height: 297mm;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .section-badge {
+    display: inline-block;
+    background: #eef2ff;
+    color: #4f46e5;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: 100px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 30px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .section-sub {
+    font-size: 15px;
+    color: #64748b;
+    margin-bottom: 36px;
+    max-width: 560px;
+    line-height: 1.6;
+  }
+
+  /* Feature cards grid */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    flex: 1;
+  }
+
+  .feat-card {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 22px 20px;
+    transition: all .2s;
+  }
+
+  .feat-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+    font-size: 22px;
+  }
+
+  .feat-name { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+  .feat-desc { font-size: 12.5px; color: #64748b; line-height: 1.55; }
+
+  .ic-blue   { background: #dbeafe; }
+  .ic-purple { background: #ede9fe; }
+  .ic-green  { background: #dcfce7; }
+  .ic-orange { background: #ffedd5; }
+  .ic-pink   { background: #fce7f3; }
+  .ic-teal   { background: #ccfbf1; }
+  .ic-yellow { background: #fef9c3; }
+  .ic-red    { background: #fee2e2; }
+  .ic-indigo { background: #eef2ff; }
+
+  /* ═══════════════════════════════════════════
+     PAGE 3 – HR & ATTENDANCE
+  ═══════════════════════════════════════════ */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+
+  .highlight-box {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    border-radius: 18px;
+    padding: 32px 28px;
+    color: #fff;
+  }
+  .highlight-box h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .highlight-box p  { font-size: 13.5px; color: rgba(255,255,255,.8); line-height: 1.6; margin-bottom: 20px; }
+
+  .list-check { list-style: none; }
+  .list-check li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13px; color: rgba(255,255,255,.85);
+    margin-bottom: 10px; line-height: 1.45;
+  }
+  .list-check li::before {
+    content: '✓';
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    background: rgba(255,255,255,.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+    margin-top: 1px;
+  }
+
+  .info-box {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 28px 24px;
+  }
+  .info-box h3 { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 16px; }
+
+  .stat-row {
+    display: flex; gap: 16px; margin-bottom: 16px;
+  }
+  .mini-stat {
+    flex: 1;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .mini-stat-num   { font-size: 26px; font-weight: 800; color: #4f46e5; }
+  .mini-stat-label { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 3px; }
+
+  .feature-list-clean { list-style: none; }
+  .feature-list-clean li {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: #475569;
+    padding: 9px 0;
+    border-bottom: 1px solid #f1f5f9;
+    line-height: 1.4;
+  }
+  .feature-list-clean li:last-child { border-bottom: none; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ═══════════════════════════════════════════
+     PAGE 4 – ACADEMIC + PORTAL + MULTI-TENANT
+  ═══════════════════════════════════════════ */
+  .wide-highlight {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-radius: 18px;
+    padding: 36px 32px;
+    color: #fff;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .wide-highlight::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(99,102,241,.15);
+  }
+  .wide-highlight-inner { position: relative; z-index: 2; }
+  .wide-highlight h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .wide-highlight p  { font-size: 14px; color: #94a3b8; max-width: 500px; line-height: 1.6; }
+
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  .mini-card {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .mini-card-icon { font-size: 26px; margin-bottom: 10px; }
+  .mini-card h4 { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+  .mini-card p  { font-size: 12px; color: #64748b; line-height: 1.5; }
+
+  /* ═══════════════════════════════════════════
+     PAGE 5 – TECH STACK + PRICING / CTA
+  ═══════════════════════════════════════════ */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .tech-pill {
+    background: #f1f5f9;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .tech-pill span { font-size: 13px; font-weight: 600; color: #334155; }
+  .tech-pill small { display: block; font-size: 11px; color: #94a3b8; margin-top: 3px; }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .price-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px 20px;
+    text-align: center;
+    background: #fff;
+  }
+  .price-card.popular {
+    border-color: #6366f1;
+    background: linear-gradient(180deg, #eef2ff 0%, #fff 40%);
+  }
+  .price-badge {
+    display: inline-block;
+    background: #6366f1; color: #fff;
+    font-size: 10px; font-weight: 700;
+    padding: 3px 10px; border-radius: 100px;
+    margin-bottom: 10px;
+    letter-spacing: .06em;
+  }
+  .price-tier  { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+  .price-amount{ font-size: 32px; font-weight: 900; color: #4f46e5; line-height: 1; }
+  .price-period{ font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+  .price-list  { list-style: none; text-align: left; }
+  .price-list li {
+    font-size: 12px; color: #475569;
+    padding: 6px 0;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .price-list li:last-child { border-bottom: none; }
+  .price-list li::before { content: '✓'; color: #22c55e; font-weight: 700; flex-shrink: 0; }
+
+  .cta-box {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #a855f7 100%);
+    border-radius: 18px;
+    padding: 40px 36px;
+    text-align: center;
+    color: #fff;
+  }
+  .cta-box h2 { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+  .cta-box p  { font-size: 15px; color: rgba(255,255,255,.8); margin-bottom: 28px; }
+  .cta-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn-white {
+    background: #fff; color: #4f46e5;
+    padding: 12px 28px; border-radius: 10px;
+    font-size: 14px; font-weight: 700;
+    text-decoration: none;
+  }
+  .btn-outline {
+    background: transparent;
+    border: 2px solid rgba(255,255,255,.5);
+    color: #fff;
+    padding: 12px 28px; border-radius: 10px;
+    font-size: 14px; font-weight: 700;
+    text-decoration: none;
+  }
+
+  .contact-row {
+    display: flex; gap: 24px; justify-content: center;
+    margin-top: 20px;
+  }
+  .contact-item { color: rgba(255,255,255,.7); font-size: 13px; }
+  .contact-item strong { color: #fff; }
+
+  /* page number */
+  .pgnum {
+    position: absolute; bottom: 24px; right: 36px;
+    font-size: 11px; color: #94a3b8;
+  }
+  .pg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 24px;
+    margin-bottom: 28px;
+    border-bottom: 1.5px solid #f1f5f9;
+  }
+  .pg-header .logo-sm {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .pg-header .logo-sm .icon {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg,#6366f1,#818cf8);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 13px; font-weight: 800;
+  }
+  .pg-header .logo-sm span { font-size: 16px; font-weight: 700; color: #0f172a; }
+  .pg-header .pg-label { font-size: 12px; color: #94a3b8; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     PAGE 1  ·  COVER
+════════════════════════════════════════ -->
+<div class="page cover">
+  <div class="cover-inner">
+    <div class="logo-badge">
+      <div class="logo-icon">AT</div>
+      <div class="logo-text">
+        <h1>ApexTime</h1>
+        <p>Cloud Platform</p>
+      </div>
+    </div>
+
+    <p class="cover-tagline">
+      The <strong>All-in-One School ERP</strong> built for modern educational institutions —
+      manage staff, students, attendance and academics from a single, beautiful platform.
+    </p>
+
+    <div class="cover-pills">
+      <span class="pill">👥 Employee Management</span>
+      <span class="pill">🎓 Academic Structure</span>
+      <span class="pill">⏱ Biometric Attendance</span>
+      <span class="pill">📋 Leave & Approvals</span>
+      <span class="pill">📊 Live Reports</span>
+      <span class="pill">📢 Announcements</span>
+      <span class="pill">🏢 Multi-Tenant</span>
+      <span class="pill">📱 Employee Self-Service</span>
+    </div>
+
+    <div class="cover-stats">
+      <div class="cstat">
+        <div class="cstat-num">10+</div>
+        <div class="cstat-label">Core Modules</div>
+      </div>
+      <div class="cstat">
+        <div class="cstat-num">∞</div>
+        <div class="cstat-label">Multi-Tenant Ready</div>
+      </div>
+      <div class="cstat">
+        <div class="cstat-num">100%</div>
+        <div class="cstat-label">Cloud-Based</div>
+      </div>
+      <div class="cstat">
+        <div class="cstat-num">24/7</div>
+        <div class="cstat-label">Access Anywhere</div>
+      </div>
+    </div>
+  </div>
+  <div class="cover-url">apextime.cloud</div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     PAGE 2  ·  FEATURES OVERVIEW
+════════════════════════════════════════ -->
+<div class="page" style="position:relative;">
+  <div class="page-inner">
+    <div class="pg-header">
+      <div class="logo-sm">
+        <div class="icon">AT</div>
+        <span>ApexTime Cloud</span>
+      </div>
+      <span class="pg-label">PRODUCT OVERVIEW</span>
+    </div>
+
+    <span class="section-badge">Everything You Need</span>
+    <h2 class="section-title">Powerful Modules.<br/>One Unified Platform.</h2>
+    <p class="section-sub">
+      ApexTime Cloud delivers a complete suite of tools to streamline every aspect of your institution's operations — from hire to retire, admission to graduation.
+    </p>
+
+    <div class="feat-grid">
+
+      <div class="feat-card">
+        <div class="feat-icon ic-blue">👥</div>
+        <div class="feat-name">Employee Management</div>
+        <div class="feat-desc">Manage employee profiles, codes, departments, designations, categories, joining dates and credentials in one place.</div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon ic-purple">🎓</div>
+        <div class="feat-name">Academic Structure</div>
+        <div class="feat-desc">Define programmes, courses, semesters, divisions and batches. Flexible hierarchy fits any school or college structure.</div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon ic-green">⏱</div>
+        <div class="feat-name">Attendance & Timesheets</div>
+        <div class="feat-desc">Real-time timesheet tracking with GPS-based punch-in/punch-out, selfie verification, and device integration.</div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon ic-orange">🕐</div>
+        <div class="feat-name">Work Shifts</div>
+        <div class="feat-desc">Create flexible work shift schedules — set start/end times, grace periods, and late mark rules per shift.</div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon ic-pink">📋</div>
+        <div class="feat-name">Leave Management</div>
+        <div class="feat-desc">Configure leave types, quotas and approval chains. Employees apply, managers approve — all digitally tracked.</div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon ic-teal">✅</div>
+        <div class="feat-name">Approval Workflows</div>
+        <div class="feat-desc">Centralised approval hub for overtime, comp-off, and attendance corrections. Status tracking at every step.</div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon ic-yellow">📊</div>
+        <div class="feat-name">Reports & Analytics</div>
+        <div class="feat-desc">Attendance reports, leave summaries and custom exports. Filter by date, department and employee instantly.</div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon ic-red">📢</div>
+        <div class="feat-name">Announcements</div>
+        <div class="feat-desc">Broadcast institution-wide or targeted announcements visible to staff and teachers on their portal.</div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon ic-indigo">🏢</div>
+        <div class="feat-name">Multi-Organisation</div>
+        <div class="feat-desc">Super-admin manages multiple schools/tenants from a single dashboard. Perfect for education groups and trusts.</div>
+      </div>
+
+    </div>
+  </div>
+  <div class="pgnum">2</div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     PAGE 3  ·  HR & ATTENDANCE DEEP DIVE
+════════════════════════════════════════ -->
+<div class="page" style="position:relative;">
+  <div class="page-inner">
+    <div class="pg-header">
+      <div class="logo-sm">
+        <div class="icon">AT</div>
+        <span>ApexTime Cloud</span>
+      </div>
+      <span class="pg-label">HR & ATTENDANCE</span>
+    </div>
+
+    <span class="section-badge">Staff Management</span>
+    <h2 class="section-title">Smart HR Built for Schools</h2>
+    <p class="section-sub">Handle every step of the employee lifecycle with precision — from onboarding to daily attendance to leave management.</p>
+
+    <div class="two-col" style="flex:1;">
+      <div class="highlight-box">
+        <h3>⏱ Attendance System</h3>
+        <p>GPS-verified, selfie-authenticated punch-in/out tied directly to biometric devices or the employee's mobile browser.</p>
+        <ul class="list-check">
+          <li>Real-time GPS location capture on every punch</li>
+          <li>Mandatory selfie photo for punch verification</li>
+          <li>Biometric device integration (fingerprint/face)</li>
+          <li>Configurable work shifts with grace periods</li>
+          <li>Late, absent & present auto-calculation</li>
+          <li>Manual correction with approval workflow</li>
+          <li>Comp-off management for extra work days</li>
+          <li>Monthly timesheet view per employee</li>
+        </ul>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="info-box">
+          <h3>📋 Leave Management</h3>
+          <ul class="feature-list-clean">
+            <li><span class="dot" style="background:#6366f1;"></span>Multiple configurable leave types (CL, SL, EL…)</li>
+            <li><span class="dot" style="background:#22c55e;"></span>Per-employee leave quota tracking</li>
+            <li><span class="dot" style="background:#f59e0b;"></span>Multi-day leave range requests</li>
+            <li><span class="dot" style="background:#ef4444;"></span>Approval / rejection with reason</li>
+            <li><span class="dot" style="background:#3b82f6;"></span>Leave balance auto-deduction</li>
+            <li><span class="dot" style="background:#a855f7;"></span>Leave history per employee</li>
+          </ul>
+        </div>
+
+        <div class="info-box">
+          <h3>📊 Live Dashboard Stats</h3>
+          <div class="stat-row">
+            <div class="mini-stat">
+              <div class="mini-stat-num" style="color:#6366f1;">Present</div>
+              <div class="mini-stat-label">Today's count</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat-num" style="color:#ef4444;">Absent</div>
+              <div class="mini-stat-label">Instant visibility</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat-num" style="color:#f59e0b;">Pending</div>
+              <div class="mini-stat-label">Approvals queue</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="pgnum">3</div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     PAGE 4  ·  ACADEMIC + PORTAL + DEVICES
+════════════════════════════════════════ -->
+<div class="page" style="position:relative;">
+  <div class="page-inner">
+    <div class="pg-header">
+      <div class="logo-sm">
+        <div class="icon">AT</div>
+        <span>ApexTime Cloud</span>
+      </div>
+      <span class="pg-label">ACADEMIC & SELF-SERVICE</span>
+    </div>
+
+    <span class="section-badge">Beyond HR</span>
+    <h2 class="section-title">Academics, Devices & Self-Service</h2>
+    <p class="section-sub">A complete ecosystem — track students, manage hardware, and empower every employee with a personal portal.</p>
+
+    <div class="wide-highlight">
+      <div class="wide-highlight-inner">
+        <h3>🎓 Academic Structure Management</h3>
+        <p>Define and manage your institution's complete academic hierarchy — programmes, courses, semesters, divisions, and batches — with full student enrolment tracking and batch filtering.</p>
+      </div>
+    </div>
+
+    <div class="three-col" style="margin-bottom:20px;">
+      <div class="mini-card">
+        <div class="mini-card-icon">👨‍💼</div>
+        <h4>Employee Self-Service Portal</h4>
+        <p>Every employee gets a personal dashboard — view schedule, punch attendance, apply for leave, and read announcements from any device.</p>
+      </div>
+      <div class="mini-card">
+        <div class="mini-card-icon">📱</div>
+        <h4>GPS + Selfie Punch</h4>
+        <p>Employees use their phone to punch in/out with live location and selfie — no physical device needed on the go.</p>
+      </div>
+      <div class="mini-card">
+        <div class="mini-card-icon">💾</div>
+        <h4>Device Management</h4>
+        <p>Register and monitor biometric attendance devices across multiple sites. Active device count visible on the admin dashboard.</p>
+      </div>
+    </div>
+
+    <div class="three-col">
+      <div class="mini-card">
+        <div class="mini-card-icon">🏫</div>
+        <h4>Student Management</h4>
+        <p>Maintain student profiles with admission numbers, batch assignments, contact info, and gender — fully searchable and filterable.</p>
+      </div>
+      <div class="mini-card">
+        <div class="mini-card-icon">📢</div>
+        <h4>Institution Announcements</h4>
+        <p>Publish notices and updates visible to staff instantly through the self-service portal. Keep everyone aligned.</p>
+      </div>
+      <div class="mini-card">
+        <div class="mini-card-icon">🔒</div>
+        <h4>Role-Based Access</h4>
+        <p>Super admin, admin, teacher, and employee roles — each with precisely scoped permissions and dedicated views.</p>
+      </div>
+    </div>
+
+  </div>
+  <div class="pgnum">4</div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     PAGE 5  ·  TECH + PRICING + CTA
+════════════════════════════════════════ -->
+<div class="page" style="position:relative; page-break-after: avoid;">
+  <div class="page-inner">
+    <div class="pg-header">
+      <div class="logo-sm">
+        <div class="icon">AT</div>
+        <span>ApexTime Cloud</span>
+      </div>
+      <span class="pg-label">TECHNOLOGY & PRICING</span>
+    </div>
+
+    <span class="section-badge">Enterprise-Grade Tech</span>
+    <h2 class="section-title" style="margin-bottom:6px;">Built to Scale. Secure by Design.</h2>
+    <p class="section-sub" style="margin-bottom:20px;">Modern, cloud-native architecture with containerised deployment and a secure multi-tenant data model.</p>
+
+    <div class="tech-grid">
+      <div class="tech-pill"><span>React 18</span><small>Frontend UI</small></div>
+      <div class="tech-pill"><span>Node.js</span><small>API Backend</small></div>
+      <div class="tech-pill"><span>PostgreSQL</span><small>Database</small></div>
+      <div class="tech-pill"><span>Prisma ORM</span><small>Data Layer</small></div>
+      <div class="tech-pill"><span>Docker</span><small>Containerised</small></div>
+      <div class="tech-pill"><span>Nginx</span><small>Reverse Proxy</small></div>
+      <div class="tech-pill"><span>JWT Auth</span><small>Secure Sessions</small></div>
+      <div class="tech-pill"><span>REST API</span><small>Integrations</small></div>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-tier">Starter</div>
+        <div class="price-amount">₹4,999</div>
+        <div class="price-period">per month · 1 school</div>
+        <ul class="price-list">
+          <li>Up to 100 employees</li>
+          <li>Up to 500 students</li>
+          <li>All core HR modules</li>
+          <li>Employee portal</li>
+          <li>Email support</li>
+        </ul>
+      </div>
+
+      <div class="price-card popular">
+        <div class="price-badge">MOST POPULAR</div>
+        <div class="price-tier">Professional</div>
+        <div class="price-amount">₹9,999</div>
+        <div class="price-period">per month · 1 school</div>
+        <ul class="price-list">
+          <li>Unlimited employees</li>
+          <li>Unlimited students</li>
+          <li>All modules + devices</li>
+          <li>Biometric integration</li>
+          <li>Priority support</li>
+        </ul>
+      </div>
+
+      <div class="price-card">
+        <div class="price-tier">Enterprise</div>
+        <div class="price-amount">Custom</div>
+        <div class="price-period">multi-school group</div>
+        <ul class="price-list">
+          <li>Unlimited organisations</li>
+          <li>Super admin panel</li>
+          <li>Custom integrations</li>
+          <li>SLA guarantee</li>
+          <li>Dedicated support</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cta-box">
+      <h2>Ready to Transform Your Institution?</h2>
+      <p>Join schools already running smarter with ApexTime Cloud. Get a free demo today.</p>
+      <div class="cta-buttons">
+        <span class="btn-white">📅 Book a Free Demo</span>
+        <span class="btn-outline">🌐 apextime.cloud</span>
+      </div>
+      <div class="contact-row">
+        <span class="contact-item">📧 <strong>hello@apextime.cloud</strong></span>
+        <span class="contact-item">📞 <strong>+91 98765 43210</strong></span>
+        <span class="contact-item">🌐 <strong>apextime.cloud</strong></span>
+      </div>
+    </div>
+
+  </div>
+  <div class="pgnum">5</div>
+</div>
+
+</body>
+</html>
