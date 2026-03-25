@@ -67,11 +67,14 @@ router.get('/monthly', async (req, res, next) => {
 
         const empIds = employees.map(e => e.id);
 
-        // 2. Fetch Timesheets
+        // 2. Fetch Timesheets - Use start/end of day to be extremely precise
         const timesheets = await prisma.timesheet.findMany({
             where: {
                 tenantId: req.tenantId,
-                date: { gte: startOfMonth.toDate(), lte: endOfMonth.toDate() },
+                date: {
+                    gte: startOfMonth.startOf('day').toDate(),
+                    lte: endOfMonth.endOf('day').toDate()
+                },
                 employeeId: { in: empIds }
             }
         });
@@ -148,8 +151,12 @@ router.get('/monthly', async (req, res, next) => {
                         shiftName = 'OFF';
                     }
 
-                    // Find punch
-                    const record = timesheets.find(t => t.employeeId === emp.id && dayjs(t.date).date() === d);
+                    // Find punch - Match precisely by YYYY-MM-DD to avoid cross-month/day-shift issues
+                    const targetDateStr = currentDay.format('YYYY-MM-DD');
+                    const record = timesheets.find(t => 
+                        t.employeeId === emp.id && 
+                        dayjs(t.date).format('YYYY-MM-DD') === targetDateStr
+                    );
 
                     if (record) {
                         if (record.inAt) {
@@ -213,7 +220,11 @@ router.get('/monthly', async (req, res, next) => {
                     }
 
                     // Find punch (same logic as before)
-                    const record = timesheets.find(t => t.employeeId === emp.id && dayjs(t.date).date() === d);
+                    const targetDateStr = currentDay.format('YYYY-MM-DD');
+                    const record = timesheets.find(t => 
+                        t.employeeId === emp.id && 
+                        dayjs(t.date).format('YYYY-MM-DD') === targetDateStr
+                    );
                     if (record) {
                         if (record.inAt) {
                             inTime = dayjs(record.inAt).format('HH:mm');

@@ -30,7 +30,11 @@ async function main() {
 
     console.log(`\nFound ${timesheets.length} total timesheet records for March 2026.`);
     
-    const futureRecords = timesheets.filter(t => dayjs(t.date).date() > 25);
+    const targetMonthStr = '2026-03';
+    const futureRecords = timesheets.filter(t => 
+        dayjs(t.date).format('YYYY-MM') === targetMonthStr && 
+        dayjs(t.date).date() > 25
+    );
     
     if (futureRecords.length > 0) {
         console.log(`\n!!! FOUND ${futureRecords.length} FUTURE RECORDS FOR MARCH 26-31:`);
