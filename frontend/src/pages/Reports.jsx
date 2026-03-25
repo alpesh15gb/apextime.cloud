@@ -251,8 +251,8 @@ export default function Reports() {
                         <div key={emp.id} className="report-employee-row" style={{ marginBottom: 15, border: '2px solid #000', pageBreakInside: 'avoid' }}>
                             <div style={{ display: 'flex' }}>
                                 {/* Left Info Block */}
-                                <div style={{ width: 140, borderRight: '2px solid #000', padding: '4px 6px', fontSize: 9, display: 'flex', flexDirection: 'column', justifyContent: 'center', lineHeight: 1.2 }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: 10, wordBreak: 'break-word', lineHeight: 1.1, marginBottom: 4 }}>{emp.name}</div>
+                                <div style={{ width: 120, borderRight: '2px solid #000', padding: '2px 4px', fontSize: 8.5, display: 'flex', flexDirection: 'column', justifyContent: 'center', lineHeight: 1.1 }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: 9, wordBreak: 'break-word', lineHeight: 1, marginBottom: 2 }}>{emp.name}</div>
                                     <div style={{ marginBottom: 1 }}>Code: {emp.code}</div>
                                     <div style={{ marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={emp.department}>Dept: {emp.department}</div>
                                     <div style={{ marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={emp.designation}>Desig: {emp.designation}</div>
@@ -269,7 +269,7 @@ export default function Reports() {
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9, textAlign: 'center', tableLayout: 'fixed' }}>
                                         <thead>
                                             <tr style={{ background: '#eee', borderBottom: 'none', height: 16 }}>
-                                                <th style={{ borderRight: '1px solid #ccc', width: 45, fontSize: 8 }}>Day</th>
+                                                <th style={{ borderRight: '1px solid #ccc', width: 40, fontSize: 7 }}>Day</th>
                                                 {Array.from({ length: monthlyData.meta.daysInMonth }, (_, i) => {
                                                     const dayOfWeek = dayjs(`${year}-${month.toString().padStart(2, '0')}-${(i + 1).toString().padStart(2, '0')}`).day();
                                                     const dayLabels = ['SU', 'M', 'TU', 'W', 'TH', 'F', 'SA'];
@@ -280,7 +280,7 @@ export default function Reports() {
                                                 })}
                                             </tr>
                                             <tr style={{ background: '#eee', borderBottom: '1px solid #000', height: 18 }}>
-                                                <th style={{ borderRight: '1px solid #ccc', width: 45, fontSize: 8 }}>Date</th>
+                                                <th style={{ borderRight: '1px solid #ccc', width: 40, fontSize: 7 }}>Date</th>
                                                 {Array.from({ length: monthlyData.meta.daysInMonth }, (_, i) => {
                                                     const dateStr = `${(i + 1).toString().padStart(2, '0')}`;
                                                     const dayOfWeek = dayjs(`${year}-${month.toString().padStart(2, '0')}-${(i + 1).toString().padStart(2, '0')}`).day();
@@ -299,7 +299,7 @@ export default function Reports() {
                                                     {Array.from({ length: monthlyData.meta.daysInMonth }, (_, i) => {
                                                         const d = i + 1;
                                                         let content = '';
-                                                        let style = { borderRight: '1px solid #ccc', fontSize: metric === 'Shift' || metric === 'Late' || metric === 'OT' ? 8 : 9, background: emp.days[d]?.shift === 'OFF' ? '#ddd' : '#fff' };
+                                                        let style = { borderRight: '1px solid #ccc', fontSize: metric === 'Shift' || metric === 'Late' || metric === 'OT' ? 7.5 : 8, background: emp.days[d]?.shift === 'OFF' ? '#ddd' : '#fff', letterSpacing: '-0.2px' };
 
                                                         if (metric === 'IN') content = emp.days[d]?.in || '';
                                                         if (metric === 'OUT') content = emp.days[d]?.out || '';
@@ -457,10 +457,19 @@ export default function Reports() {
     .report-employee-row th,
     .report-employee-row td {
         border-color: #000 !important;
-        padding: 2px !important;
-        font-size: 8pt !important;
+        padding: 1px !important;
+        font-size: 6.5pt !important;
         white-space: nowrap;
-        overflow: hidden;
+        overflow: visible;
+        text-overflow: clip;
+        letter-spacing: -0.3px;
+    }
+
+    /* Extra tight for Shift row */
+    .report-employee-row tr:nth-child(3) td, 
+    .report-employee-row tr:nth-child(4) td {
+        font-size: 6pt !important;
+        letter-spacing: -0.4px;
     }
 
     h3 { margin-top: 0; font-size: 14pt; }
