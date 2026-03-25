@@ -39,31 +39,38 @@ async function main() {
             continue;
         }
 
-        await prisma.timesheet.upsert({
+        const existing = await prisma.timesheet.findFirst({
             where: {
-                employeeId_date_tenantId: {
-                    employeeId: emp.id,
-                    date: startOfToday,
-                    tenantId: emp.tenantId
-                }
-            },
-            update: {
-                inAt: inAt,
-                outAt: outAt,
-                source: 'device_restored'
-            },
-            create: {
                 employeeId: emp.id,
                 date: startOfToday,
-                tenantId: emp.tenantId,
-                inAt: inAt,
-                outAt: outAt,
-                source: 'device_restored',
-                status: 'pending'
+                tenantId: emp.tenantId
             }
         });
+
+        if (existing) {
+            await prisma.timesheet.update({
+                where: { id: existing.id },
+                data: {
+                    inAt: inAt,
+                    outAt: outAt,
+                    source: 'device_restored'
+                }
+            });
+        } else {
+            await prisma.timesheet.create({
+                data: {
+                    employeeId: emp.id,
+                    date: startOfToday,
+                    tenantId: emp.tenantId,
+                    inAt: inAt,
+                    outAt: outAt,
+                    source: 'device_restored',
+                    status: 'pending'
+                }
+            });
+        }
         restoredCount++;
-        console.log(`[PASS] Restored: ${userId} (${emp.id}) | IN ${dayjs(inAt).format('HH:mm')} | OUT ${outAt ? dayjs(outAt).format('HH:mm') : '-'}`);
+        console.log(`[PASS] Restored: ${userId} | IN ${dayjs(inAt).format('HH:mm')} | OUT ${outAt ? dayjs(outAt).format('HH:mm') : '-'}`);
     }
     console.log(`\nRestore complete. ${restoredCount} records processed.`);
 }
