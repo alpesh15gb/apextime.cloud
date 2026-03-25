@@ -287,6 +287,18 @@ router.post('/manual', requireRole('admin', 'super_admin'), async (req, res, nex
     try {
         const { employeeId, date, inAt, outAt, remarks } = req.body;
 
+        // Validation: Prevent future dates
+        const now = dayjs();
+        if (date && dayjs(date).isAfter(now.endOf('day'))) {
+            return res.status(400).json({ error: 'Cannot enter attendance for future dates' });
+        }
+        if (inAt && dayjs(inAt).isAfter(now.add(5, 'minute'))) {
+            return res.status(400).json({ error: 'Clock-in time cannot be in the future' });
+        }
+        if (outAt && dayjs(outAt).isAfter(now.add(5, 'minute'))) {
+            return res.status(400).json({ error: 'Clock-out time cannot be in the future' });
+        }
+
         const employee = await prisma.employee.findFirst({
             where: { id: parseInt(employeeId), tenantId: req.tenantId },
         });

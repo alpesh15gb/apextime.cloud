@@ -133,6 +133,11 @@ async function main() {
         }
 
         if (punchDate.isValid()) {
+            // Validation: Skip future dates
+            if (punchDate.isAfter(dayjs().add(5, 'minute'))) {
+                console.warn(`   ! Skipping future-dated punch for ${empCode}: ${dateTimeStr} (Server time: ${dayjs().format()})`);
+                continue;
+            }
             // Create a proper UTC midnight date to avoid timezone shifts
             const dateOnly = new Date(Date.UTC(punchDate.year(), punchDate.month(), punchDate.date()));
             const punchTime = punchDate.toDate();

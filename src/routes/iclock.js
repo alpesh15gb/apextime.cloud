@@ -115,6 +115,12 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
                     // Log the raw data
                     const punchTime = dayjs(dateTimeStr, 'YYYY-MM-DD HH:mm:ss').toDate();
 
+                    // Validation: Ignore future punches (with 5-minute buffer for slight clock drifts)
+                    if (dayjs(punchTime).isAfter(dayjs().add(5, 'minute'))) {
+                        console.warn(`[iClock] Ignoring future-dated punch: User ${userId} at ${dateTimeStr} (Server time: ${dayjs().format()}). This usually indicates an incorrect device clock.`);
+                        continue;
+                    }
+
                     // Check for existing log
                     let currentLog = await prisma.deviceLog.findFirst({
                         where: {
