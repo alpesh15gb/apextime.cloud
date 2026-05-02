@@ -19,15 +19,16 @@ router.get('/', requireRole('super_admin'), async (req, res, next) => {
 // POST /api/tenants - Create new tenant with admin user
 router.post('/', requireRole('super_admin'), async (req, res, next) => {
     try {
-        const { name, slug, domain, adminUsername, adminPassword } = req.body;
+        const { name, slug, domain, adminUsername, adminPassword, subscriptionDays } = req.body;
 
         if (!name || !slug) {
             return res.status(400).json({ error: 'Name and slug are required' });
         }
 
         const result = await prisma.$transaction(async (tx) => {
+            const subscriptionExpiry = subscriptionDays ? new Date(Date.now() + parseInt(subscriptionDays) * 24 * 60 * 60 * 1000) : null;
             const tenant = await tx.tenant.create({
-                data: { name, slug: slug.toLowerCase(), domain },
+                data: { name, slug: slug.toLowerCase(), domain, subscriptionExpiry },
             });
 
             // Create admin user
@@ -72,10 +73,23 @@ router.post('/', requireRole('super_admin'), async (req, res, next) => {
 // PUT /api/tenants/:uuid
 router.put('/:uuid', requireRole('super_admin'), async (req, res, next) => {
     try {
-        const { name, domain, status, config, logo } = req.body;
+        const { name, domain, status, config, logo, subscriptionDays, addDays } = req.body;
+        
+        const updateData = { name, domain, status, config, logo };
+
+        if (subscriptionDays !== undefined) {
+             updateData.subscriptionExpiry = new Date(Date.now() + parseInt(subscriptionDays) * 24 * 60 * 60 * 1000);
+        } else if (addDays !== undefined) {
+            const currentTenant = await prisma.tenant.findUnique({ where: { uuid: req.params.uuid } });
+            const currentExpiry = currentTenant.subscriptionExpiry && new Date(currentTenant.subscriptionExpiry) > new Date() 
+                ? new Date(currentTenant.subscriptionExpiry) 
+                : new Date();
+            updateData.subscriptionExpiry = new Date(currentExpiry.getTime() + parseInt(addDays) * 24 * 60 * 60 * 1000);
+        }
+
         const tenant = await prisma.tenant.update({
             where: { uuid: req.params.uuid },
-            data: { name, domain, status, config, logo },
+            data: updateData,
         });
         res.json(tenant);
     } catch (error) { next(error); }

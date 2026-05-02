@@ -21,6 +21,7 @@ model Tenant {
   logo      String?
   config    Json?    @default("{}")
   status    String   @default("active") // active, suspended, trial
+  subscriptionExpiry DateTime? @map("subscription_expiry")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

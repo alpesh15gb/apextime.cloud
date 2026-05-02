@@ -23,6 +23,7 @@ async function main() {
             name: 'Demo School',
             slug: 'demo',
             status: 'active',
+            subscriptionExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
         },
     });
     console.log(`  ✅ Tenant: ${tenant.name} (${tenant.slug})`);
