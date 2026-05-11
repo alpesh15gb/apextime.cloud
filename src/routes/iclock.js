@@ -194,60 +194,70 @@ router.post(['/cdata', '/cdata.aspx'], async (req, res, next) => {
                     }
 
                     if (employee) {
-                        const dateStr = dayjs(punchTime).format('YYYY-MM-DD');
+                        const nowIST = dayjs.tz(punchTime, TZ);
+                        const dateStr = nowIST.format('YYYY-MM-DD');
 
-                        // Check for existing timesheet for the day
-                        const existingTimesheet = await prisma.timesheet.findFirst({
+                        // 1. ROBUST LOOKBACK: Check for any open or recent timesheet in the last 22 hours
+                        let timesheet = await prisma.timesheet.findFirst({
                             where: {
+                                tenantId: device.tenantId,
                                 employeeId: employee.id,
-                                date: new Date(dateStr)
+                                inAt: {
+                                    gte: dayjs(punchTime).subtract(22, 'hour').toDate(),
+                                    lte: punchTime
+                                }
                             },
+                            orderBy: { inAt: 'desc' }
                         });
 
-                        if (existingTimesheet) {
-                            // Timesheet exists. Check if this punch is an "Out" punch (later than "In")
-                            const diffMinutes = dayjs(punchTime).diff(dayjs(existingTimesheet.inAt), 'minute');
+                        if (timesheet) {
+                            // Timesheet exists
+                            let existingPunches = timesheet.punches || [];
+                            if (typeof existingPunches === 'string') {
+                                try { existingPunches = JSON.parse(existingPunches); } catch (e) { existingPunches = []; }
+                            }
+                            if (!Array.isArray(existingPunches)) existingPunches = [];
 
-                            if (diffMinutes >= 2) {
-                                // Only update outAt if the new punch is later than the currently saved outAt (or if there is no outAt yet)
-                                if (!existingTimesheet.outAt || dayjs(punchTime).isAfter(dayjs(existingTimesheet.outAt))) {
-                                    await prisma.timesheet.update({
-                                        where: { id: existingTimesheet.id },
-                                        data: { outAt: punchTime },
-                                    });
-                                }
-                            } else if (diffMinutes < 0) {
-                                // Extremely rare edge case: punchTime is somehow EARLIER than inAt 
-                                // (e.g., ADMS sent logs out of order). We should shift the old inAt to outAt, 
-                                // and make this punch the new inAt.
-                                if (!existingTimesheet.outAt || dayjs(existingTimesheet.inAt).isAfter(dayjs(existingTimesheet.outAt))) {
-                                    await prisma.timesheet.update({
-                                        where: { id: existingTimesheet.id },
-                                        data: {
-                                            inAt: punchTime,
-                                            outAt: existingTimesheet.inAt
-                                        },
-                                    });
-                                } else {
-                                    await prisma.timesheet.update({
-                                        where: { id: existingTimesheet.id },
-                                        data: { inAt: punchTime },
-                                    });
-                                }
+                            const lastPunchTime = existingPunches.length > 0 
+                                ? dayjs(existingPunches[existingPunches.length - 1].time) 
+                                : dayjs(timesheet.inAt);
+
+                            const diffFromLastMs = dayjs(punchTime).diff(lastPunchTime);
+                            
+                            if (diffFromLastMs >= 120000) { // 2 minutes gap to avoid duplicates
+                                const newPunch = { time: punchTime, device_sn: SN, type: 'auto' };
+                                const updatedPunches = [...existingPunches, newPunch];
+                                
+                                await prisma.timesheet.update({
+                                    where: { id: timesheet.id },
+                                    data: { 
+                                        punches: updatedPunches,
+                                        outAt: punchTime 
+                                    },
+                                });
+                                console.log(`[iClock] Updated TS ${timesheet.id} for ${userId} with OUT punch ${dayjs(punchTime).format('HH:mm')}`);
+                            } else {
+                                console.log(`[iClock] Ignored duplicate punch for ${userId} (diff: ${diffFromLastMs}ms)`);
                             }
                         } else {
                             // First punch of the day: Clock in
+                            const firstPunch = { time: punchTime, device_sn: SN, type: 'in' };
+                            const dbDate = dayjs.utc(dateStr).toDate();
+                            
                             await prisma.timesheet.create({
                                 data: {
                                     tenantId: device.tenantId,
                                     employeeId: employee.id,
-                                    date: new Date(dateStr),
+                                    date: dbDate,
                                     inAt: punchTime,
+                                    outAt: null, 
+                                    punches: [firstPunch],
                                     source: 'device',
                                     status: 'auto_approved',
                                     meta: { device_sn: SN, verify_mode: verifyMode, in_out_mode: inOutMode },
                                 },
                             });
+                            console.log(`[iClock] Created new TS for ${userId} at ${dayjs(punchTime).format('HH:mm')}`);
                         }
 
                         // Mark log as processed
